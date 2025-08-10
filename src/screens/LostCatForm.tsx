@@ -1,17 +1,6 @@
 import { Info, MapPin, Upload } from 'lucide-react';
 import React from 'react';
-import { SubmitHandler, useForm }         contact_name: data.contactName,
-        contact_phone: data.contactPhone,
-        contact_email: data.contactEmail,
-        status: 'active',
-        sex: data.sex,
-        has_collar: data.hasCollar,
-      };
-
-      // Insert the lost pet report
-      const { data: lostPet, error: lostPetError } = await supabase
-        .from('lost_pets')
-        .insert(finalData)-form';
+import { SubmitHandler, useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { provinces } from '../data/provinces';
 import { PetCharacteristics } from '../features/pets/components/PetCharacteristics';
@@ -67,7 +56,6 @@ const LostCatForm: React.FC = () => {
     reset,
   } = useForm<FormInputs>({
     defaultValues: {
-      petType: 'cat',
       sex: 'unknown',
       hasCollar: false,
       breed: '',
@@ -91,12 +79,6 @@ const LostCatForm: React.FC = () => {
 
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
     try {
-      // Validate required fields
-      if (!data.petType) {
-        toast.error('กรุณาเลือกประเภทสัตว์เลี้ยง');
-        return;
-      }
-
       // Calculate date of birth based on age and lost date
       const lostDate = new Date(data.lostDate);
       const ageYears = parseInt(data.ageYears);
@@ -108,7 +90,7 @@ const LostCatForm: React.FC = () => {
 
       // Prepare the data for submission
       const finalData = {
-        pet_type: data.petType || 'cat', // fallback to 'cat' if undefined
+        pet_type: data.petType,
         pet_name: data.petName,
         breed: data.breed || 'ไม่สามารถระบุได้',
         pattern: data.pattern || 'ไม่สามารถระบุได้',
@@ -131,10 +113,6 @@ const LostCatForm: React.FC = () => {
         has_collar: data.hasCollar,
       };
 
-      console.log('� ข้อมูลที่จะส่ง:', finalData);
-      console.log('🔍 Pet Type:', finalData.pet_type);
-      console.log('�💾 กำลังบันทึกข้อมูลสัตว์...');
-      
       // Insert the lost pet report
       const { data: lostPet, error: lostPetError } = await supabase
         .from('lost_pets')
@@ -142,47 +120,26 @@ const LostCatForm: React.FC = () => {
         .select()
         .single();
 
-      if (lostPetError) {
-        console.error('❌ ข้อผิดพลาดในการบันทึกข้อมูลสัตว์:', lostPetError);
-        throw lostPetError;
-      }
-
-      console.log('✅ บันทึกข้อมูลสัตว์สำเร็จ ID:', lostPet.id);
+      if (lostPetError) throw lostPetError;
 
       // Upload images if any
       if (data.images && data.images.length > 0) {
-        console.log(`📸 กำลังอัปโหลด ${data.images.length} รูปภาพ...`);
-        
-        const imagePromises = data.images.map(async (file, index) => {
-          console.log(`📷 อัปโหลดรูปที่ ${index + 1}: ${file.name} (${file.size} bytes)`);
-          
+        const imagePromises = data.images.map(async (file) => {
           const fileExt = file.name.split('.').pop();
-          const fileName = `${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}-${Date.now()}.${fileExt}`;
+          const fileName = `${Math.random()}.${fileExt}`;
           const filePath = `public/${lostPet.id}/${fileName}`;
-
-          console.log(`📁 เส้นทางไฟล์: ${filePath}`);
 
           // Upload the image to storage
           const { error: uploadError } = await supabase.storage
             .from('lost-pet-images')
-            .upload(filePath, file, {
-              contentType: file.type || 'image/jpeg',
-              upsert: false
-            });
+            .upload(filePath, file);
 
-          if (uploadError) {
-            console.error(`❌ ข้อผิดพลาดในการอัปโหลดรูปที่ ${index + 1}:`, uploadError);
-            throw uploadError;
-          }
-
-          console.log(`✅ อัปโหลดรูปที่ ${index + 1} สำเร็จ`);
+          if (uploadError) throw uploadError;
 
           // Get the public URL
           const {
             data: { publicUrl },
           } = supabase.storage.from('lost-pet-images').getPublicUrl(filePath);
-
-          console.log(`🔗 Public URL: ${publicUrl}`);
 
           // Insert the image record
           const { error: imageError } = await supabase
@@ -192,61 +149,26 @@ const LostCatForm: React.FC = () => {
               image_url: publicUrl,
             });
 
-          if (imageError) {
-            console.error(`❌ ข้อผิดพลาดในการบันทึกข้อมูลรูปที่ ${index + 1}:`, imageError);
-            throw imageError;
-          }
-
-          console.log(`💾 บันทึกข้อมูลรูปที่ ${index + 1} สำเร็จ`);
+          if (imageError) throw imageError;
         });
 
         await Promise.all(imagePromises);
-        console.log('✅ อัปโหลดภาพทั้งหมดสำเร็จ');
-      } else {
-        console.log('📷 ไม่มีภาพให้อัปโหลด');
       }
 
-      console.log('🎉 ส่งข้อมูลสำเร็จทั้งหมด!');
       toast.success('ส่งข้อมูลสำเร็จ! เราจะติดต่อกลับโดยเร็วที่สุด');
       reset();
-    } catch (error: any) {
-      console.error('❌ ข้อผิดพลาดในการส่งแบบฟอร์ม:', error);
-      
-      // Show specific error message based on error type
-      if (error?.message?.includes('duplicate key')) {
-        toast.error('ข้อมูลซ้ำ กรุณาตรวจสอบและลองใหม่');
-      } else if (error?.message?.includes('storage')) {
-        toast.error('ไม่สามารถอัปโหลดรูปภาพได้ กรุณาลองใหม่');
-      } else if (error?.message?.includes('network') || error?.message?.includes('fetch')) {
-        toast.error('ปัญหาการเชื่อมต่อ กรุณาตรวจสอบอินเทอร์เน็ต');
-      } else {
-        toast.error(`เกิดข้อผิดพลาด: ${error?.message || 'กรุณาลองใหม่อีกครั้ง'}`);
-      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     }
   };
 
   const handleImageChange = (files: File[]) => {
-    console.log('📷 handleImageChange เรียกใช้แล้ว');
-    console.log('📁 ไฟล์ที่ได้รับ:', files.length);
-    
     if (files.length > 10) {
-      console.log('❌ ไฟล์เกิน 10 รูป');
       toast.error('อัพโหลดได้สูงสุด 10 รูปเท่านั้น');
       return;
     }
-    
-    // Log file details
-    files.forEach((file, index) => {
-      console.log(`📷 ไฟล์ที่ ${index + 1}:`, {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        lastModified: file.lastModified
-      });
-    });
-    
     setValue('images', files, { shouldValidate: true });
-    console.log('✅ setValue เสร็จแล้ว');
   };
 
   const handlePetTypeChange = (value: string) => {
@@ -292,11 +214,10 @@ const LostCatForm: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="petType" className="text-[#2B2B2B] font-medium">ประเภทสัตว์เลี้ยง *</Label>
+                    <Label htmlFor="petType" className="text-[#2B2B2B] font-medium">ประเภทสัตว์เลี้ยง</Label>
                     <Select
                       value={selectedPetType}
                       onValueChange={handlePetTypeChange}
-                      required
                     >
                       <SelectTrigger className="border-gray-300 focus:border-[#F4A261] focus:ring-[#F4A261]">
                         <SelectValue placeholder="เลือกประเภทสัตว์เลี้ยง" />
@@ -309,9 +230,9 @@ const LostCatForm: React.FC = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                    {!selectedPetType && (
+                    {errors.petType && (
                       <p className="text-red-500 text-sm mt-1">
-                        กรุณาเลือกประเภทสัตว์เลี้ยง
+                        {errors.petType.message}
                       </p>
                     )}
                   </div>
