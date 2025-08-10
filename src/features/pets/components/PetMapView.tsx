@@ -258,6 +258,8 @@ export const PetMapView: React.FC<PetMapViewProps> = ({
                     setSelectedPetIndex(index);
                     onMapCenterChange([pet.latitude!, pet.longitude!]);
                     onMapZoomChange(15);
+                    // Also move the green pin to this pet's location so other pages use it
+                    onCustomMarkerChange([pet.latitude!, pet.longitude!]);
                   },
                 }}
               >

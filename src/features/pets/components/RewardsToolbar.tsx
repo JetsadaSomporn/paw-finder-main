@@ -1,8 +1,5 @@
 import { provinces } from '@/data/provinces';
-import {
-  REWARD_SORT_BY,
-  useRewardStore,
-} from '@/features/rewards/stores/useRewardStore';
+import { REWARD_SORT_BY } from '@/features/rewards/stores/useRewardStore';
 import { HStack, VStack } from '@/shared/components/ui';
 import {
   Select,
@@ -50,17 +47,17 @@ const TabButton: React.FC<{
 export const RewardsToolbar: React.FC<RewardsToolbarProps> = ({
   activeTab,
   selectedProvince,
+  sortBy,
   onTabChange,
   onProvinceChange,
+  onSortChange,
 }) => {
-  const sortBy = useRewardStore((state) => state.sortBy);
-  const setSortBy = useRewardStore((state) => state.setSortBy);
 
   useEffect(() => {
     if (activeTab === 'nearby' && sortBy !== REWARD_SORT_BY.DISTANCE) {
-      setSortBy(REWARD_SORT_BY.DISTANCE);
+      onSortChange(REWARD_SORT_BY.DISTANCE);
     }
-  }, [activeTab, setSortBy, sortBy]);
+  }, [activeTab, sortBy, onSortChange]);
 
   return (
     <VStack className="w-full gap-4">
@@ -109,10 +106,10 @@ export const RewardsToolbar: React.FC<RewardsToolbarProps> = ({
         </div>
         <HStack className="items-center justify-end flex-shrink-0 gap-2">
           <span className="text-sm font-medium text-gray-500">เรียงตาม:</span>
-          {activeTab !== 'nearby' ? (
+      {activeTab !== 'nearby' ? (
             <Select
               value={sortBy}
-              onValueChange={(value) => setSortBy(value as REWARD_SORT_BY)}
+        onValueChange={(value) => onSortChange(value as REWARD_SORT_BY)}
             >
               <SelectTrigger className="w-full sm:w-[250px] bg-white">
                 <SelectValue />

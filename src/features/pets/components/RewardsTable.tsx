@@ -3,20 +3,16 @@ import { renderPetDescriptionText } from '@/features/rewards/utils/reward.util';
 import { translateProvince } from '@/lib/utils';
 import { Button } from '@/shared/components/ui/button';
 import { LostPet } from '../types';
-import { sortLostPetsForReward } from '../utils/pet.util';
+import { calculateDistance } from '@/features/pets/utils/locationUtils';
 
 interface RewardsTableProps {
+  // Pets should already be sorted by parent logic (e.g., distance/reward/date)
   lostPets: LostPet[];
   userLocation?: { latitude: number; longitude: number } | null;
-  activeTab?: string;
 }
 
-const RewardsTable: React.FC<RewardsTableProps> = ({ lostPets }) => {
+const RewardsTable: React.FC<RewardsTableProps> = ({ lostPets, userLocation }) => {
   const openModal = useRewardStore((state) => state.openModal);
-
-  const sortBy = useRewardStore((state) => state.sortBy);
-
-  const sortedPets = sortLostPetsForReward(lostPets, sortBy);
 
   const formatReward = (reward: number | null) => {
     if (reward === null) return '-';
@@ -49,7 +45,7 @@ const RewardsTable: React.FC<RewardsTableProps> = ({ lostPets }) => {
             </tr>
           </thead>
           <tbody>
-            {sortedPets.map((pet, index) => (
+      {lostPets.map((pet, index) => (
               <tr key={pet.id} className="border-b">
                 <td className="py-4 px-2">
                   <div className="w-8 h-8 bg-orange-200 rounded-full flex items-center justify-center font-bold text-orange-600">
@@ -71,6 +67,11 @@ const RewardsTable: React.FC<RewardsTableProps> = ({ lostPets }) => {
                 </td>
                 <td className="py-4 px-2 text-gray-600">
                   {pet.location}, {translateProvince(pet.province)}
+                  {userLocation && pet.latitude && pet.longitude && (
+                    <span className="ml-2 text-xs text-gray-400">
+                      • {calculateDistance(userLocation.latitude, userLocation.longitude, pet.latitude, pet.longitude).toFixed(1)} กม.
+                    </span>
+                  )}
                 </td>
                 <td className="py-4 px-2 text-gray-600">
                   {formatDate(pet.lost_date)}
@@ -96,7 +97,7 @@ const RewardsTable: React.FC<RewardsTableProps> = ({ lostPets }) => {
       </div>
       {/* Mobile Cards */}
       <div className="block md:hidden space-y-4">
-        {sortedPets.map((pet, index) => (
+    {lostPets.map((pet, index) => (
           <div
             key={pet.id}
             className="rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3"

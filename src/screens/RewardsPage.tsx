@@ -17,6 +17,7 @@ const RewardsContent: React.FC<{
   totalItems: number;
   itemsPerPage: number;
   onPageChange: (page: number) => void;
+  userLocation?: { latitude: number; longitude: number } | null;
 }> = ({
   loading,
   paginatedPets,
@@ -25,8 +26,9 @@ const RewardsContent: React.FC<{
   totalItems,
   itemsPerPage,
   onPageChange,
+  userLocation,
 }) => {
-  if (loading) return <LoadingRewardTable className="mx-auto" />;
+  if (loading) return <LoadingRewardTable />;
 
   if (paginatedPets.length === 0) {
     return <RewardTableNotFound />;
@@ -34,7 +36,7 @@ const RewardsContent: React.FC<{
 
   return (
     <VStack className="gap-4 w-full">
-      <RewardsTable lostPets={paginatedPets} />
+  <RewardsTable lostPets={paginatedPets} userLocation={userLocation} />
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
@@ -58,6 +60,7 @@ export const RewardsPage: React.FC = () => {
     totalItems,
     itemsPerPage,
     sortBy,
+  userLocation,
     handleTabChange,
     handleProvinceChange,
     handleSortChange,
@@ -98,6 +101,7 @@ export const RewardsPage: React.FC = () => {
           totalItems={totalItems}
           itemsPerPage={itemsPerPage}
           onPageChange={handlePageChange}
+          userLocation={userLocation}
         />
 
         {selectedPet && (

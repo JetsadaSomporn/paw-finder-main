@@ -9,12 +9,13 @@ import {
 } from '@/features/pets/utils/pet.util';
 import LoadingScreen from '@/shared/components/LoadingScreen';
 import { Slider, VStack } from '@/shared/components/ui';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PetSearchFilters } from '../../features/pets/components/PetSearchFilters';
 import { PetFilters } from '../../features/pets/types';
 import { useGeolocation } from '../../shared/hooks/useGeolocation';
 import MapCard from './MapCard';
 import { useSyncLocation } from './index.hook';
+import { useLocation as useRouterLocation, useNavigate } from 'react-router-dom';
 
 const DEFAULT_FILTERS: PetFilters = {
   province: 'all',
@@ -63,6 +64,28 @@ export const FoundPetsSearch: React.FC = () => {
     setMapCenter,
     onUpdateLocation,
   });
+
+  // Get current location when component mounts (only once)
+  useEffect(() => {
+    getCurrentLocation();
+  }, []); // Empty dependency array - run only once on mount
+
+  // Propagate current "green pin" to router state so other pages (e.g., Rewards) can read it
+  const navigate = useNavigate();
+  const routerLocation = useRouterLocation();
+  useEffect(() => {
+    if (!location) return;
+    const prevState = (routerLocation.state as any) || {};
+    const prevLL = prevState.ll as [number, number] | undefined;
+    const isSame = Array.isArray(prevLL)
+      && prevLL.length === 2
+      && prevLL[0] === location[0]
+      && prevLL[1] === location[1];
+    if (isSame) return;
+    const nextState = { ...prevState, ll: location };
+    // Replace to avoid adding history entries on every move
+    navigate('.', { replace: true, state: nextState });
+  }, [location, navigate]);
 
   if (loading) return <LoadingScreen message="กำลังค้นหาสัตว์เลี้ยงที่พบ..." />;
 

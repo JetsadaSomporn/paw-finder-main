@@ -2,10 +2,17 @@ import React, { useState } from 'react';
 import { LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { Link, useLocation as useRouterLocation } from 'react-router-dom';
 
 const Header: React.FC = () => {
   const { user } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const routerLocation = useRouterLocation();
+  const currentState = (routerLocation.state as any) || undefined;
+  const llArray = Array.isArray(currentState?.ll)
+    ? (currentState.ll as [number, number])
+    : undefined;
+  const llQuery = llArray ? `?ll=${llArray[0]},${llArray[1]}` : '';
 
   const handleSignOut = async () => {
     try {
@@ -26,7 +33,7 @@ const Header: React.FC = () => {
           {/* Logo */}
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <a href="/" className="flex items-center space-x-2">
+              <Link to="/" state={currentState} className="flex items-center space-x-2">
                 <img
                   src="/logo.png"
                   alt="Paw Finder Logo"
@@ -35,36 +42,40 @@ const Header: React.FC = () => {
                 <span className="text-xl font-bold text-[#F4A261]">
                   PawFinder
                 </span>
-              </a>
+              </Link>
             </div>
           </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex space-x-8">
-            <a
-              href="/lost-pets"
+            <Link
+              to="/lost-pets"
+              state={currentState}
               className="text-gray-700 hover:text-[#F4A261] px-3 py-2 text-md font-medium"
             >
               แจ้งสัตว์เลี้ยงหาย
-            </a>
-            <a
-              href="/found-pets"
+            </Link>
+            <Link
+              to="/found-pets"
+              state={currentState}
               className="text-gray-700 hover:text-[#F4A261] px-3 py-2 text-md font-medium"
             >
               แจ้งพบสัตว์เลี้ยง
-            </a>
-            <a
-              href="/found-search"
+            </Link>
+            <Link
+              to="/found-search"
+              state={currentState}
               className="text-gray-700 hover:text-[#F4A261] px-3 py-2 text-md font-medium"
             >
               สัตว์เลี้ยงที่พบ
-            </a>
-            <a
-              href="/rewards"
+            </Link>
+            <Link
+              to={{ pathname: '/rewards', search: llQuery }}
+              state={currentState}
               className="text-gray-700 hover:text-[#F4A261] px-3 py-2 text-md font-medium"
             >
               รางวัล
-            </a>
+            </Link>
           </nav>
 
           {/* User Menu */}
@@ -84,18 +95,20 @@ const Header: React.FC = () => {
               </div>
             ) : (
               <div className="flex items-center space-x-4">
-                <a
-                  href="/signin"
+                <Link
+                  to="/signin"
+                  state={currentState}
                   className="text-gray-700 hover:text-[#F4A261] px-3 py-2 text-sm font-medium"
                 >
                   เข้าสู่ระบบ
-                </a>
-                <a
-                  href="/signup"
+                </Link>
+                <Link
+                  to="/signup"
+                  state={currentState}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#F4A261] hover:bg-[#FF5A4A] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F4A261]"
                 >
                   สมัครสมาชิก
-                </a>
+                </Link>
               </div>
             )}
           </div>
@@ -120,36 +133,41 @@ const Header: React.FC = () => {
       {isMenuOpen && (
         <div className="md:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t border-gray-200">
-            <a
-              href="/"
+            <Link
+              to="/"
+              state={currentState}
               className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-[#F4A261] hover:bg-gray-50"
             >
               หน้าหลัก
-            </a>
-            <a
-              href="/lost-pets"
+            </Link>
+            <Link
+              to="/lost-pets"
+              state={currentState}
               className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-[#F4A261] hover:bg-gray-50"
             >
               แจ้งสัตว์เลี้ยงหาย
-            </a>
-            <a
-              href="/found-pets"
+            </Link>
+            <Link
+              to="/found-pets"
+              state={currentState}
               className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-[#F4A261] hover:bg-gray-50"
             >
               แจ้งพบสัตว์เลี้ยง
-            </a>
-            <a
-              href="/found-search"
+            </Link>
+            <Link
+              to="/found-search"
+              state={currentState}
               className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-[#F4A261] hover:bg-gray-50"
             >
               สัตว์เลี้ยงที่พบ
-            </a>
-            <a
-              href="/rewards"
+            </Link>
+            <Link
+              to={{ pathname: '/rewards', search: llQuery }}
+              state={currentState}
               className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-[#F4A261] hover:bg-gray-50"
             >
               รางวัล
-            </a>
+            </Link>
             {user ? (
               <div className="px-3 py-2 space-y-2">
                 <p className="text-sm text-gray-700">สวัสดี, {user.email}</p>
@@ -163,18 +181,20 @@ const Header: React.FC = () => {
               </div>
             ) : (
               <div className="px-3 py-2 space-y-2">
-                <a
-                  href="/signin"
+                <Link
+                  to="/signin"
+                  state={currentState}
                   className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-[#F4A261] hover:bg-gray-50"
                 >
                   เข้าสู่ระบบ
-                </a>
-                <a
-                  href="/signup"
+                </Link>
+                <Link
+                  to="/signup"
+                  state={currentState}
                   className="block px-3 py-2 text-base font-medium text-white bg-[#F4A261] hover:bg-[#FF5A4A] rounded-md"
                 >
                   สมัครสมาชิก
-                </a>
+                </Link>
               </div>
             )}
           </div>

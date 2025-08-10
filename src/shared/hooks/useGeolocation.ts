@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
 
 interface UseGeolocationReturn {
@@ -14,17 +14,28 @@ export const useGeolocation = (): UseGeolocationReturn => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Module-scoped guard to avoid duplicate requests during React StrictMode double-mount
+  // and accidental rapid re-entries.
+  // This persists across component unmount/mount cycles in the same session.
+  // Note: declared outside function scope would be ideal, but kept here with closure over static ref.
+  // We'll attach it to the function object to keep file-local scope without exporting globals.
+  (useGeolocation as any)._inFlight = (useGeolocation as any)._inFlight ?? false;
+
   const getCurrentLocation = async () => {
+    if ((useGeolocation as any)._inFlight) {
+      return;
+    }
     if (!navigator.geolocation) {
       toast.error('เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง');
       return;
     }
 
+    (useGeolocation as any)._inFlight = true;
     setLoading(true);
     setError(null);
 
     // First try with high accuracy
-    const tryGetLocation = (highAccuracy = true) => {
+  const tryGetLocation = (highAccuracy = true) => {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const lat = pos.coords.latitude;
@@ -45,6 +56,7 @@ export const useGeolocation = (): UseGeolocationReturn => {
             toast.success('อัปเดตตำแหน่งปัจจุบันแล้ว!');
           }
           setLoading(false);
+          (useGeolocation as any)._inFlight = false;
         },
         (error) => {
           console.log('Error getting location:', error);
@@ -70,7 +82,7 @@ export const useGeolocation = (): UseGeolocationReturn => {
 
     // IP-based geolocation fallback
     const tryIPBasedLocation = async (
-      originalError?: GeolocationPositionError
+      _originalError?: GeolocationPositionError
     ) => {
       try {
         const response = await fetch('https://ipapi.co/json/');
@@ -92,6 +104,7 @@ export const useGeolocation = (): UseGeolocationReturn => {
         setError('ไม่สามารถระบุตำแหน่งได้');
       } finally {
         setLoading(false);
+  (useGeolocation as any)._inFlight = false;
       }
     };
 
@@ -102,9 +115,10 @@ export const useGeolocation = (): UseGeolocationReturn => {
     setLocation(location);
   }
 
-  useEffect(() => {
-    getCurrentLocation();
-  }, []);
+  // Remove automatic location fetching - let component decide when to get location
+  // useEffect(() => {
+  //   getCurrentLocation();
+  // }, []);
 
   return {
     location,
