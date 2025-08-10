@@ -13,5 +13,18 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node'
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
+    }
+  },
+  server: {
+  },
+  preview: {
+    port: 4173,
+    strictPort: true
   }
 })
