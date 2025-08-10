@@ -2,6 +2,8 @@ import { Toaster } from 'react-hot-toast';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import {
+  AuthCallback,
+  EmailConfirmation,
   FoundPetForm,
   FoundPetsSearch,
   LostCatForm,
@@ -32,6 +34,8 @@ function App() {
               <Route path="/search" element={<LostPetsSearch />} />
               <Route path="/signin" element={<SignIn />} />
               <Route path="/signup" element={<SignUp />} />
+              <Route path="/email-confirmation" element={<EmailConfirmation />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
             </Routes>
           </main>
           <Footer />

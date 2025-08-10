@@ -29,15 +29,24 @@ const SignUp: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
 
       if (error) throw error;
 
-      // Success - redirect to sign in
-      navigate('/signin');
+      // Check if email confirmation is required
+      if (data.user && !data.session) {
+        // Email confirmation required
+        navigate('/email-confirmation');
+      } else {
+        // Direct login (email confirmation disabled)
+        navigate('/');
+      }
     } catch (error: any) {
       setError(error.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก');
     } finally {

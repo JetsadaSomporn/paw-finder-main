@@ -16,14 +16,24 @@ const SignIn = () => {
     setError("");
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Check if it's an email confirmation error
+        if (error.message.includes('Email not confirmed')) {
+          setError('กรุณายืนยันอีเมลของคุณก่อนเข้าสู่ระบบ');
+        } else {
+          throw error;
+        }
+        return;
+      }
 
-      navigate("/");
+      if (data.user) {
+        navigate("/");
+      }
     } catch (error: any) {
       setError(error.message || "เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
     } finally {

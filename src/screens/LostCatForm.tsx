@@ -119,7 +119,7 @@ const LostCatForm: React.FC = () => {
         province: data.province,
         latitude: data.latitude,
         longitude: data.longitude,
-        reward: data.reward ? parseInt(data.reward, 10) : null,
+        reward: data.reward ? Number(data.reward) || null : null,
         details: data.details || 'ไม่มีรายละเอียดเพิ่มเติม', // fallback เป็น default text
         contact_name: data.contactName,
         contact_phone: data.contactPhone,
