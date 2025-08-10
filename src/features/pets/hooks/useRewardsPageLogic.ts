@@ -1,8 +1,22 @@
 import { useFetchLostPets } from "@/features/pets/hooks/useFetchLostPets";
 import { LostPet } from "@/features/pets/types";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { REWARD_SORT_BY } from "@/features/rewards/stores/useRewardStore";
 
 const PETS_PER_PAGE = 8;
+
+// Haversine formula to calculate distance between two points in kilometers
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
 
 export const useRewardsPageLogic = () => {
   const { lostPets, loading, error } = useFetchLostPets();
@@ -11,6 +25,29 @@ export const useRewardsPageLogic = () => {
   const [selectedProvince, setSelectedProvince] = useState("all");
   const [sortBy, setSortBy] = useState("reward_desc");
   const [currentPage, setCurrentPage] = useState(1);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  // Get user location when nearby tab is active
+  useEffect(() => {
+    if (activeTab === "nearby" && !userLocation && !locationLoading) {
+      setLocationLoading(true);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+          setLocationLoading(false);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          setLocationLoading(false);
+        },
+        { timeout: 10000, enableHighAccuracy: true }
+      );
+    }
+  }, [activeTab, userLocation, locationLoading]);
 
   const filteredAndSortedPets = useMemo(() => {
     let pets: LostPet[] = [...lostPets].filter(
@@ -20,7 +57,9 @@ export const useRewardsPageLogic = () => {
     if (activeTab === "province" && selectedProvince !== "all") {
       pets = pets.filter((pet) => pet.province === selectedProvince);
     }
-    // TODO: 'nearby' tab will require geolocation implementation
+
+    // For nearby tab, show all pets but will be sorted by distance
+    // No distance filtering, just ensure pets have coordinates for sorting
 
     const sortedPets = [...pets].sort((a, b) => {
       switch (sortBy) {
@@ -34,6 +73,15 @@ export const useRewardsPageLogic = () => {
           return (
             new Date(a.lost_date).getTime() - new Date(b.lost_date).getTime()
           );
+        case REWARD_SORT_BY.DISTANCE:
+          if (!userLocation) return 0;
+          const distanceA = a.latitude && a.longitude 
+            ? calculateDistance(userLocation.latitude, userLocation.longitude, a.latitude, a.longitude)
+            : Infinity;
+          const distanceB = b.latitude && b.longitude 
+            ? calculateDistance(userLocation.latitude, userLocation.longitude, b.latitude, b.longitude)
+            : Infinity;
+          return distanceA - distanceB; // Sort from nearest to farthest
         case "reward_desc":
         default:
           return (b.reward ?? 0) - (a.reward ?? 0);
@@ -41,7 +89,7 @@ export const useRewardsPageLogic = () => {
     });
 
     return sortedPets;
-  }, [lostPets, activeTab, selectedProvince, sortBy]);
+  }, [lostPets, activeTab, selectedProvince, sortBy, userLocation]);
 
   const paginatedPets = useMemo(() => {
     const startIndex = (currentPage - 1) * PETS_PER_PAGE;
@@ -77,7 +125,7 @@ export const useRewardsPageLogic = () => {
 
   return {
     // State
-    loading,
+    loading: loading || locationLoading,
     error,
     activeTab,
     selectedProvince,
@@ -87,6 +135,7 @@ export const useRewardsPageLogic = () => {
     totalPages,
     totalItems: filteredAndSortedPets.length,
     itemsPerPage: PETS_PER_PAGE,
+    userLocation,
     // Handlers
     handleTabChange,
     handleProvinceChange,

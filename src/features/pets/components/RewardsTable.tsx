@@ -7,6 +7,8 @@ import { sortLostPetsForReward } from '../utils/pet.util';
 
 interface RewardsTableProps {
   lostPets: LostPet[];
+  userLocation?: { latitude: number; longitude: number } | null;
+  activeTab?: string;
 }
 
 const RewardsTable: React.FC<RewardsTableProps> = ({ lostPets }) => {

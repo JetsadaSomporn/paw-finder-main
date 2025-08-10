@@ -630,7 +630,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
 
         {/* Search Instructions */}
         <div className="text-xs text-gray-500 mt-1">
-          พิมพ์เพื่อค้นหาสถานที่ในประเทศไทย (ใช้ Google Places API)
+          พิมพ์เพื่อค้นหาสถานที่ในประเทศไทย 
         </div>
       </div>
 
