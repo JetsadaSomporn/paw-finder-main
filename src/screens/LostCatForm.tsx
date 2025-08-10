@@ -1,6 +1,6 @@
 import { Info, MapPin, Upload } from 'lucide-react';
 import React from 'react';
-import { SubmitHandler, useForm } from 'react-hook-form';
+import { Controller, SubmitHandler, useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { provinces } from '../data/provinces';
 import { PetCharacteristics } from '../features/pets/components/PetCharacteristics';
@@ -50,17 +50,30 @@ const LostCatForm: React.FC = () => {
   const {
     register,
     handleSubmit,
+    control,
     setValue,
     watch,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<FormInputs>({
     defaultValues: {
-      sex: 'unknown',
-      hasCollar: false,
+      petType: 'cat',
+      petName: '',
       breed: '',
       pattern: '',
       colors: [],
+      ageYears: '0',
+      ageMonths: '0',
+      lostDate: '',
+      location: '',
+      province: '',
+      reward: '',
+      details: '', // เพิ่ม details เป็น empty string
+      contactName: '',
+      contactPhone: '',
+      contactEmail: '',
+      sex: 'unknown',
+      hasCollar: false,
       latitude: 13.7563,
       longitude: 100.5018,
       images: [],
@@ -79,6 +92,9 @@ const LostCatForm: React.FC = () => {
 
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
     try {
+      
+      
+     
       // Calculate date of birth based on age and lost date
       const lostDate = new Date(data.lostDate);
       const ageYears = parseInt(data.ageYears);
@@ -103,8 +119,8 @@ const LostCatForm: React.FC = () => {
         province: data.province,
         latitude: data.latitude,
         longitude: data.longitude,
-        reward: data.reward ? parseFloat(data.reward) : null,
-        details: data.details,
+        reward: data.reward ? parseInt(data.reward, 10) : null,
+        details: data.details || 'ไม่มีรายละเอียดเพิ่มเติม', // fallback เป็น default text
         contact_name: data.contactName,
         contact_phone: data.contactPhone,
         contact_email: data.contactEmail,
@@ -421,20 +437,43 @@ const LostCatForm: React.FC = () => {
                   <div>
                     <Label htmlFor="reward" className="text-[#2B2B2B] font-medium">รางวัล (บาท)</Label>
                     <Input
-                      {...register('reward')}
+                      {...register('reward', {
+                        pattern: {
+                          value: /^\d+$/,
+                          message: 'กรุณาระบุตัวเลขเท่านั้น'
+                        }
+                      })}
                       type="number"
                       min="0"
+                      step="1"
                       placeholder="ระบุจำนวนเงิน (ไม่บังคับ)"
                       className="border-gray-300 focus:border-[#F4A261] focus:ring-[#F4A261]"
                     />
+                    {errors.reward && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.reward.message}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="details" className="text-[#2B2B2B] font-medium">รายละเอียดเพิ่มเติม</Label>
-                    <Textarea
-                      {...register('details')}
-                      placeholder="อธิบายลักษณะพิเศษ, สภาพร่างกาย, หรือข้อมูลอื่นๆ ที่อาจช่วยในการระบุตัวตน"
-                      rows={4}
-                      className="border-gray-300 focus:border-[#F4A261] focus:ring-[#F4A261]"
+                    <Controller
+                      name="details"
+                      control={control}
+                      defaultValue=""
+                      render={({ field }) => (
+                        <Textarea
+                          {...field}
+                          id="details"
+                          placeholder="อธิบายลักษณะพิเศษ, สภาพร่างกาย, หรือข้อมูลอื่นๆ ที่อาจช่วยในการระบุตัวตน"
+                          rows={4}
+                          className="border-gray-300 focus:border-[#F4A261] focus:ring-[#F4A261]"
+                          onChange={(e) => {
+                            field.onChange(e);
+                            console.log('Details field changed:', e.target.value);
+                          }}
+                        />
+                      )}
                     />
                   </div>
                   <div>
