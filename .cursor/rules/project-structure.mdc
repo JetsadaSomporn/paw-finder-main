@@ -1,0 +1,83 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+{
+  "structure": {
+    "src/": {
+      "description": "Source code root, all app logic and UI lives here.",
+      "folders": {
+        "features/": {
+          "description": "Self-contained feature modules (UI + logic + Tailwind styling).",
+          "eachFeature/": {
+            "components/": "Feature-specific UI components using Tailwind classes.",
+            "hooks/": "Custom hooks relevant to the feature.",
+            "services/": "Feature-specific API calls or logic.",
+            "slices/": "State management (Redux slice/Zustand store).",
+            "types.ts": "Feature-local type definitions.",
+            "index.ts": "Barrel file for easy importing."
+          }
+        },
+        "shared/": {
+          "description": "Reusable, generic code used across features.",
+          "folders": {
+            "components/": {
+              "description": "Common Tailwind-styled UI components.",
+              "structure": {
+                "Button.tsx": "Tailwind-styled button component.",
+                "Modal.tsx": "Reusable modal with Tailwind transitions.",
+                "Card.tsx": "Generic card layout component."
+              }
+            },
+            "hooks/": "Global reusable hooks.",
+            "utils/": "General-purpose utilities.",
+            "constants/": "App-wide constants (routes, labels, roles).",
+            "types/": "Global types and interfaces.",
+            "services/": "API clients or shared logic (e.g., Axios config)."
+          }
+        },
+        "app/": {
+          "description": "Application shell, layout, routing, and global setup.",
+          "folders": {
+            "layout/": "Tailwind-styled app layout components (Sidebar, Header).",
+            "routes/": "Routes grouped by feature.",
+            "store/": "Global state config (Redux or Zustand).",
+            "theme/": {
+              "description": "Tailwind config extensions and theme variables.",
+              "files": {
+                "tailwind.config.js": "Custom theme settings, plugins.",
+                "globals.css": "Base layer styles (using Tailwind’s @layer)."
+              }
+            }
+          }
+        },
+        "assets/": {
+          "description": "Images, icons, fonts, etc.",
+          "folders": {
+            "images/": "Static images (e.g., logo, banners).",
+            "icons/": "SVGs or icon components.",
+            "fonts/": "Custom font files if any."
+          }
+        }
+      }
+    }
+  },
+  "tailwindUsage": {
+    "stylingApproach": "Utility-first, avoid external CSS unless needed.",
+    "recommended": [
+      "@apply in component classNames for readability",
+      "Use Tailwind’s @layer for reusable style classes",
+      "Use dark mode classes and responsive prefixes (md:, lg:) properly",
+      "Define colors, fontSizes, spacing in tailwind.config.js"
+    ]
+  },
+  "namingConventions": {
+    "folders": "kebab-case",
+    "components": "PascalCase (e.g., JobCard.tsx)",
+    "files": "camelCase for logic (e.g., jobService.ts)",
+    "styles": "Colocate Tailwind overrides in globals.css or use @layer"
+  }
+}
+
+And also don't use dummy useEffect() please create another custom hook with meaningful name. For example, useSyncForm

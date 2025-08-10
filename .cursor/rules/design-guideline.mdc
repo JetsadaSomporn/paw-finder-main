@@ -1,0 +1,92 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+{
+  "colorPalette": {
+    "primary": "#F4A261",
+    "secondary": "#6C4F3D",
+    "background": "#F7FFE0",
+    "textPrimary": "#3E3E3E",
+    "textSecondary": "#2B2B2B",
+    "cardBackground": "#FFFFFF",
+    "highlight": "#F4A261",
+    "buttonText": "#FFFFFF"
+  },
+  "typography": {
+    "fontFamily": "Rounded Sans Serif",
+    "headingFontSize": "24px",
+    "subHeadingFontSize": "18px",
+    "bodyFontSize": "14px",
+    "captionFontSize": "12px",
+    "fontWeight": {
+      "regular": 400,
+      "medium": 500,
+      "bold": 700
+    }
+  },
+  "buttons": {
+    "primary": {
+      "backgroundColor": "#F4A261",
+      "textColor": "#FFFFFF",
+      "borderRadius": "12px",
+      "padding": "12px 24px"
+    },
+    "secondary": {
+      "backgroundColor": "#FFFFFF",
+      "textColor": "#F4A261",
+      "border": "1px solid #F4A261",
+      "borderRadius": "12px",
+      "padding": "12px 24px"
+    }
+  },
+  "cards": {
+    "borderRadius": "20px",
+    "boxShadow": "0 4px 20px rgba(0, 0, 0, 0.05)",
+    "padding": "16px",
+    "backgroundColor": "#FFFFFF"
+  },
+  "inputs": {
+    "borderRadius": "12px",
+    "padding": "12px",
+    "borderColor": "#E0E0E0",
+    "placeholderColor": "#BDBDBD"
+  },
+  "icons": {
+    "style": "Flat, Rounded",
+    "color": "#F4A261"
+  },
+  "layout": {
+    "spacing": {
+      "small": "8px",
+      "medium": "16px",
+      "large": "24px"
+    },
+    "grid": {
+      "columns": 2,
+      "gutter": "16px"
+    },
+    "alignment": "Center aligned content with consistent padding"
+  },
+  "uiComponents": {
+    "login": {
+      "socialButtons": ["Gmail", "Facebook"],
+      "fields": ["Email Address", "Password"],
+      "forgotPassword": true,
+      "registerLink": true
+    },
+    "checkout": {
+      "priceBreakdown": true,
+      "paymentMethods": ["Credit Card", "PayPal", "Google Pay"],
+      "couponInput": true
+    },
+    "petListing": {
+      "cardStyle": "Image on top, description below",
+      "actionButton": "Adopt Now"
+    }
+  },
+  "useTailwind": {
+    "description": "Please use Tailwind to decorate components"
+  }
+}

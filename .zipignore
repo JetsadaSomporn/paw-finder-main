@@ -1,0 +1,21 @@
+# Files and directories to exclude from zip
+node_modules/
+.git/
+.vscode/
+.idea/
+dist/
+build/
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+coverage/
+.nyc_output/
+.cache/
+.parcel-cache/
+*.tgz
+*.tar.gz

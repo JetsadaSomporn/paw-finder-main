@@ -1,0 +1,72 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+{
+  "guidelines": [
+    {
+      "title": "Component Separation",
+      "description": "Avoid placing multiple large components, heavy logic, or too much JSX in one page file (e.g., `Home.tsx`). Instead, split the page into smaller, well-named child components (e.g., `HeroSection`, `FeatureList`, `ContactForm`).",
+      "rationale": "Improves readability, maintainability, and supports reuse across other pages.",
+      "example": {
+        "bad": "HomePage.tsx contains JSX for header, list rendering, form, modal, and all logic.",
+        "good": "HomePage.tsx imports and composes <Header />, <FeatureList />, and <ContactForm /> components from `/components/` directory."
+      }
+    },
+    {
+      "title": "Utility Function Organization",
+      "description": "Move pure helper or utility functions to a separate module such as `/utils/` or `/lib/` instead of defining them inside components or pages.",
+      "rationale": "Decouples logic from rendering and promotes testability and reuse.",
+      "example": {
+        "bad": "A `formatDate` function is defined inside a component file.",
+        "good": "`formatDate` is placed in `utils/format.ts` and imported where needed."
+      }
+    },
+    {
+      "title": "Avoid Dummy useEffect",
+      "description": "Do not include empty `useEffect` hooks or those with unclear purpose. Move logic into a dedicated custom hook with a clear name (e.g., `useScrollToTop`, `useLoadUser`).",
+      "rationale": "Dummy effects cause confusion and signal poor separation of concerns.",
+      "example": {
+        "bad": "useEffect(() => {}, []); // no real logic",
+        "good": "useScrollToTop(); // custom hook encapsulates the behavior"
+      }
+    },
+    {
+      "title": "Custom Hooks for Side Effects",
+      "description": "Extract all logic with side effects or subscriptions (e.g., event listeners, API calls, timers) into custom hooks. These hooks should follow the `useX` naming convention.",
+      "rationale": "Improves testability and ensures separation between logic and view layers.",
+      "example": {
+        "bad": "useEffect inside component handles API fetching",
+        "good": "useUserData() hook is defined in `hooks/useUserData.ts` and called in the component"
+      }
+    },
+    {
+      "title": "Reusable Components",
+      "description": "Design components to be flexible and reusable by accepting props for dynamic content, behavior, or styling. Avoid overfitting a component to one narrow use case unless necessary.",
+      "rationale": "Reusable components save development time and reduce duplication.",
+      "example": {
+        "bad": "A `Button` component hardcoded to say 'Submit' and use only blue color",
+        "good": "`<Button label='Save' variant='primary' onClick={handleSave} />`"
+      }
+    },
+    {
+      "title": "File Structure and Naming",
+      "description": "Follow a consistent file structure. Keep components in `/components/`, hooks in `/hooks/`, utilities in `/utils/`, and avoid ambiguous file names like `index2.tsx` or `temp.tsx`.",
+      "rationale": "Clear structure improves discoverability and reduces onboarding time for new devs.",
+      "example": {
+        "bad": "All logic and UI in `App.tsx` with vague file names",
+        "good": "`/components/Button.tsx`, `/hooks/useLocalStorage.ts`, `/utils/date.ts`"
+      }
+    },
+    {
+      "title": "Minimal Inline Styles",
+      "description": "Avoid inline styles and instead use classNames (preferably utility-first like Tailwind CSS) or styled components. Only use inline styles for dynamic or calculated values.",
+      "rationale": "Keeps styles consistent and avoids duplication across components.",
+      "example": {
+        "bad": "<div style={{ marginTop: '10px' }} />",
+        "good": "<div className='mt-2' /> or styled.div`margin-top: 10px;`"
+      }
+    }
+  ]
+}
