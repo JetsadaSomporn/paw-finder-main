@@ -250,25 +250,28 @@ const LostCatForm: React.FC = () => {
 
 
           // Upload the image to storage
-          const { error: uploadError } = await supabase.storage
+          console.log('[Upload] will upload', { filePath, name: file.name, size: file.size, type: file.type });
+          const { error: uploadError, data: uploadData } = await supabase.storage
             .from('lost-pet-images')
             .upload(filePath, file);
 
+          console.log('[Upload] upload result', { filePath, uploadData, uploadError });
           if (uploadError) throw uploadError;
 
           // Get the public URL
-          const {
-            data: { publicUrl },
-          } = supabase.storage.from('lost-pet-images').getPublicUrl(filePath);
+          const { data: publicData } = supabase.storage.from('lost-pet-images').getPublicUrl(filePath);
+          console.log('[Upload] getPublicUrl', { filePath, publicData });
 
           // Insert the image record
-          const { error: imageError } = await supabase
+          const { error: imageError, data: imageInsert } = await supabase
             .from('lost_pet_images')
             .insert({
               lost_pet_id: lostPet.id,
-              image_url: publicUrl,
-            });
+              image_url: publicData?.publicUrl,
+            })
+            .select();
 
+          console.log('[Upload] image insert', { filePath, imageInsert, imageError });
           if (imageError) throw imageError;
         });
 
