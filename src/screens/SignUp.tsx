@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, UserPlus, User, X, FileText, Facebook } from 'lucide-react';
 import { FaGoogle } from 'react-icons/fa';
@@ -19,6 +19,7 @@ const SignUp: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const acceptRef = useRef<HTMLInputElement | null>(null);
 
   // โหลดเนื้อหาจากไฟล์ .txt เมื่อเปิด modal
   useEffect(() => {
@@ -289,8 +290,25 @@ const SignUp: React.FC = () => {
               id="acceptTerms"
               name="acceptTerms"
               type="checkbox"
+              ref={acceptRef}
               checked={acceptTerms}
-              onChange={(e) => setAcceptTerms(e.target.checked)}
+              onChange={(e) => {
+                setAcceptTerms(e.target.checked);
+                // clear or set custom validity in Thai
+                if (e.target.checked) {
+                  e.currentTarget.setCustomValidity('');
+                } else {
+                  e.currentTarget.setCustomValidity('กรุณายอมรับเงื่อนไขการใช้งานและนโยบายความเป็นส่วนตัวเพื่อดำเนินการต่อ');
+                }
+              }}
+              onInvalid={(e) => {
+                // set the custom message shown by the browser when validation fails
+                (e.target as HTMLInputElement).setCustomValidity('กรุณายอมรับเงื่อนไขการใช้งานและนโยบายความเป็นส่วนตัวเพื่อดำเนินการต่อ');
+              }}
+              onInput={(e) => {
+                // clear custom validity as the user interacts
+                (e.currentTarget as HTMLInputElement).setCustomValidity('');
+              }}
               className="mt-1 h-4 w-4 text-[#F4A261] focus:ring-[#F4A261] border-gray-300 rounded"
               required
             />
