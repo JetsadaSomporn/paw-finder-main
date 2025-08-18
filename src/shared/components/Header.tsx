@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../lib/supabase';
 import { Link, useLocation as useRouterLocation } from 'react-router-dom';
 
 const Header: React.FC = () => {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, profileLoading, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const routerLocation = useRouterLocation();
   const currentState = (routerLocation.state as any) || undefined;
@@ -90,7 +89,12 @@ const Header: React.FC = () => {
             {user ? (
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-gray-700">
-                  สวัสดี, {profile?.username || user.email?.split('@')[0] || 'ผู้ใช้'}
+                  {profileLoading && user && (
+                    <span className="inline-block w-20 h-4 bg-gray-200 rounded animate-pulse align-middle" aria-label="กำลังโหลดโปรไฟล์" />
+                  )}
+                  {!profileLoading && user && (
+                    <>สวัสดี, {profile?.username || user.email?.split('@')[0] || 'ผู้ใช้'}</>
+                  )}
                 </span>
                 <button
                   onClick={handleSignOut}
@@ -178,7 +182,12 @@ const Header: React.FC = () => {
             {user ? (
               <div className="px-3 py-2 space-y-2">
                 <p className="text-sm text-gray-700">
-                  สวัสดี, {profile?.username || user.email?.split('@')[0] || 'ผู้ใช้'}
+                  {profileLoading && user && (
+                    <span className="inline-block w-24 h-4 bg-gray-200 rounded animate-pulse" aria-label="กำลังโหลดโปรไฟล์" />
+                  )}
+                  {!profileLoading && user && (
+                    <>สวัสดี, {profile?.username || user.email?.split('@')[0] || 'ผู้ใช้'}</>
+                  )}
                 </p>
                 <button
                   onClick={handleSignOut}

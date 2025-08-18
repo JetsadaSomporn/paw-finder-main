@@ -233,6 +233,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProfileError(null);
     const step = 'handleUserProfile';
     try {
+      // Dev-only artificial delay to help visualize loading placeholder
+      if (process.env.NODE_ENV === 'development') {
+        await new Promise(r => setTimeout(r, 300));
+      }
       // fetch existing profile by id only
       const { data: existingProfile, error: selectError, status } = await supabase
         .from('profiles')
