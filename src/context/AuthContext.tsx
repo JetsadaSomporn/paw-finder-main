@@ -308,43 +308,78 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       if (cancelled) return;
       setUser(session?.user ?? null);
-      if (session?.user) {
-        await handleUserProfile(session.user);
-      } else {
+      try {
+        if (session?.user) {
+          await handleUserProfile(session.user);
+        } else {
+          setProfile(null);
+          setNeedsTermsAcceptance(false);
+          setNeedsUsernameSetup(false);
+          setProfileError({
+            type: 'no_session',
+            step: 'init',
+            message: 'No session/user after retries',
+            timestamp: new Date().toISOString(),
+            ...errorDetail
+          });
+        }
+      } catch (e) {
+        // ensure we don't leave loading flags set if handleUserProfile throws
+        if (process.env.NODE_ENV === 'development') console.error('[AuthContext] init.handleUserProfile error', e);
         setProfile(null);
         setNeedsTermsAcceptance(false);
         setNeedsUsernameSetup(false);
-        setProfileError({
-          type: 'no_session',
-          step: 'init',
-          message: 'No session/user after retries',
-          timestamp: new Date().toISOString(),
-          ...errorDetail
-        });
+        setProfileError({ type: 'unknown', step: 'init.handleUserProfile', message: (e as any)?.message || String(e), timestamp: new Date().toISOString(), extra: e });
+      } finally {
+        setLoading(false);
+        setProfileLoading(false);
       }
-      setLoading(false);
     }
-    init();
+
+    // run init and guard against unhandled rejections so React doesn't get into a broken state
+    init().catch((e) => {
+      if (process.env.NODE_ENV === 'development') console.error('[AuthContext] init error', e);
+      setUser(null);
+      setProfile(null);
+      setNeedsTermsAcceptance(false);
+      setNeedsUsernameSetup(false);
+      setProfileError({ type: 'unknown', step: 'init', message: (e as any)?.message || String(e), timestamp: new Date().toISOString(), extra: e });
+      setLoading(false);
+      setProfileLoading(false);
+    });
 
     // Listen for changes on auth state (sign in, sign out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await handleUserProfile(session.user);
-      } else {
+    const authListener = supabase.auth.onAuthStateChange(async (_event, session) => {
+      try {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await handleUserProfile(session.user);
+        } else {
+          setProfile(null);
+          setNeedsTermsAcceptance(false);
+          setNeedsUsernameSetup(false);
+          setProfileError({
+            type: 'no_session',
+            step: 'onAuthStateChange',
+            message: 'No session/user in onAuthStateChange',
+            timestamp: new Date().toISOString(),
+          });
+        }
+      } catch (e) {
+        if (process.env.NODE_ENV === 'development') console.error('[AuthContext] onAuthStateChange handler error', e);
         setProfile(null);
         setNeedsTermsAcceptance(false);
         setNeedsUsernameSetup(false);
-        setProfileError({
-          type: 'no_session',
-          step: 'onAuthStateChange',
-          message: 'No session/user in onAuthStateChange',
-          timestamp: new Date().toISOString(),
-        });
+        setProfileError({ type: 'unknown', step: 'onAuthStateChange', message: (e as any)?.message || String(e), timestamp: new Date().toISOString(), extra: e });
+      } finally {
+        setLoading(false);
+        setProfileLoading(false);
       }
-      setLoading(false);
     });
-    return () => { cancelled = true; subscription.unsubscribe(); };
+
+    // authListener may have different shapes depending on supabase-js version; be defensive
+    const subscription = (authListener && (authListener as any).data && (authListener as any).data.subscription) || (authListener as any).subscription || null;
+    return () => { cancelled = true; try { subscription?.unsubscribe?.(); } catch (e) { /* ignore */ } };
   }, []);
 
   const handleUserProfile = async (user: User) => {
