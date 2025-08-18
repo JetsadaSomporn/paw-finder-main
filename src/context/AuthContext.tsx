@@ -233,7 +233,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProfileError(null);
     const step = 'handleUserProfile';
     try {
-      // fetch existing profile by id
+      // fetch existing profile by id only
       const { data: existingProfile, error: selectError, status } = await supabase
         .from('profiles')
         .select('*')
@@ -244,69 +244,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const errCode = (selectError as any).code || (selectError as any).status || null;
         const errMsg = selectError.message || String(selectError);
         const ts = new Date().toISOString();
-
-        // If the error indicates no rows, attempt to find a profile by the user's email as a safer fallback
         const looksLikeNoRows = String(errCode) === 'PGRST116' || /no rows found/i.test(errMsg);
-        if (looksLikeNoRows || !existingProfile) {
-          // try email-based lookup if email present
-          const email = (user.email || (user.user_metadata as any)?.email) as string | undefined | null;
-          if (email) {
-            const { data: byEmail, error: emailErr } = await supabase
-              .from('profiles')
-              .select('*')
-              .ilike('email', email)
-              .maybeSingle();
 
-            if (!emailErr && byEmail) {
-              // Found a profile matching the user's email — use it as the canonical profile
-              setProfile(byEmail);
-              setNeedsTermsAcceptance(!byEmail.terms_accepted_at);
-              setNeedsUsernameSetup(!byEmail.username);
+        if (looksLikeNoRows) {
+          // Create minimal profile
+            const newProfile = {
+              id: user.id,
+              full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || null,
+              avatar_url: (user.user_metadata as any)?.avatar_url || null,
+            };
+            const { data: createdProfile, error: insertError, status: insertStatus } = await supabase
+              .from('profiles')
+              .insert([newProfile])
+              .select()
+              .single();
+            if (insertError) {
+              setProfile(null);
+              setNeedsTermsAcceptance(false);
+              setNeedsUsernameSetup(false);
+              setProfileError({
+                type: insertStatus === 403 ? 'rls_error' : 'insert_error',
+                step: 'insert-after-select',
+                message: insertError.message || String(insertError),
+                code: insertError.code || insertStatus || null,
+                status: insertStatus,
+                requiresSignOut: insertStatus === 403,
+                timestamp: ts,
+                extra: insertError,
+              });
               setProfileLoading(false);
               return;
             }
-          }
-
-          // If no email-match, attempt to create a profile for fresh social users
-          const newProfile = {
-            id: user.id,
-            full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || null,
-            avatar_url: (user.user_metadata as any)?.avatar_url || null,
-            email: user.email || (user.user_metadata as any)?.email || null,
-          };
-
-          const { data: createdProfile, error: insertError, status: insertStatus } = await supabase
-            .from('profiles')
-            .insert([newProfile])
-            .select()
-            .single();
-
-          if (insertError) {
-            setProfile(null);
-            setNeedsTermsAcceptance(false);
-            setNeedsUsernameSetup(false);
-            setProfileError({
-              type: insertStatus === 403 ? 'rls_error' : 'insert_error',
-              step: 'insert-after-select',
-              message: insertError.message || String(insertError),
-              code: insertError.code || insertStatus || null,
-              status: insertStatus,
-              requiresSignOut: insertStatus === 403,
-              timestamp: ts,
-              extra: insertError,
-            });
+            setProfile(createdProfile || newProfile);
+            setNeedsTermsAcceptance(true);
+            setNeedsUsernameSetup(true);
             setProfileLoading(false);
             return;
-          }
-
-          setProfile(createdProfile || newProfile);
-          setNeedsTermsAcceptance(true);
-          setNeedsUsernameSetup(true);
-          setProfileLoading(false);
-          return;
         }
 
-        // Other select errors (network/rls)
+        // Other select errors (network/RLS)
         const requiresSignOut = status === 401 || status === 403;
         setProfile(null);
         setNeedsTermsAcceptance(false);
@@ -325,39 +301,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // No select error and we have the existingProfile variable
       if (!existingProfile) {
-        // No profile by id — try email-based lookup before creating
-        const email = (user.email || (user.user_metadata as any)?.email) as string | undefined | null;
-        if (email) {
-          const { data: byEmail, error: emailErr } = await supabase
-            .from('profiles')
-            .select('*')
-            .ilike('email', email)
-            .maybeSingle();
-          if (!emailErr && byEmail) {
-            setProfile(byEmail);
-            setNeedsTermsAcceptance(!byEmail.terms_accepted_at);
-            setNeedsUsernameSetup(!byEmail.username);
-            setProfileLoading(false);
-            return;
-          }
-        }
-
-        // create a new profile for social/new user
+        // Unexpected: no select error but also no data (treat as create path)
         const newProfile = {
           id: user.id,
           full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || null,
           avatar_url: (user.user_metadata as any)?.avatar_url || null,
-          email: user.email || (user.user_metadata as any)?.email || null,
         };
-
         const { data: createdProfile, error: insertError, status: insertStatus } = await supabase
           .from('profiles')
           .insert([newProfile])
           .select()
           .single();
-
         if (insertError) {
           setProfile(null);
           setNeedsTermsAcceptance(false);
@@ -375,7 +330,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfileLoading(false);
           return;
         }
-
         setProfile(createdProfile || newProfile);
         setNeedsTermsAcceptance(true);
         setNeedsUsernameSetup(true);
