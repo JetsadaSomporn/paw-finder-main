@@ -130,14 +130,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.debug('AuthContext.getSession result on init:', session?.user?.id ?? null, session);
+    let cancelled = false;
+    async function init() {
+      // Wait for session to be available (retry up to 3 times, 300ms apart)
+      let session;
+      for (let i = 0; i < 3; i++) {
+        const { data } = await supabase.auth.getSession();
+        session = data.session;
+        if (session?.user) break;
+        await new Promise(r => setTimeout(r, 300));
       }
+      if (cancelled) return;
       setUser(session?.user ?? null);
-
-      // ดึง profile เฉพาะเมื่อมี user
       if (session?.user) {
         await handleUserProfile(session.user);
       } else {
@@ -145,9 +149,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setNeedsTermsAcceptance(false);
         setNeedsUsernameSetup(false);
       }
-
       setLoading(false);
-    });
+    }
+    init();
 
     // Listen for changes on auth state (sign in, sign out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -155,7 +159,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.debug('AuthContext.onAuthStateChange event:', event, 'user:', session?.user?.id ?? null);
       }
       setUser(session?.user ?? null);
-
       if (session?.user) {
         await handleUserProfile(session.user);
       } else {
@@ -163,37 +166,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setNeedsTermsAcceptance(false);
         setNeedsUsernameSetup(false);
       }
-
       setLoading(false);
     });
-
-    return () => subscription.unsubscribe();
+    return () => { cancelled = true; subscription.unsubscribe(); };
   }, []);
 
   const handleUserProfile = async (user: User) => {
     // ดึง profile ที่มีอยู่ (ตรวจ error เพื่อจับ RLS/permission failures)
-    const { data: existingProfile, error: selectError } = await supabase
+    const { data: existingProfile, error: selectError, status } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .maybeSingle();
 
     if (selectError) {
-      // If SELECT fails (often RLS/policy), don't block the entire UI.
-      // Log error for later diagnosis but create a minimal fallback profile
-      console.error('profiles SELECT error for user', user.id, selectError);
-
-      const fallbackProfile = {
-        id: user.id,
-        username: user.email ? user.email.split('@')[0] : undefined,
-        full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || null,
-        avatar_url: (user.user_metadata as any)?.avatar_url || null,
-      };
-
-      // Use fallback so header and sign-out remain functional. Do not force username/terms flows here
-      setProfile(fallbackProfile as any);
+      // Log error and do NOT fallback immediately
+      console.error('[AuthContext] profiles SELECT error for user', user.id, selectError, 'status:', status);
+      setProfile(null);
       setNeedsTermsAcceptance(false);
       setNeedsUsernameSetup(false);
+      // Optionally: set a UI error flag here for display
       return;
     }
 
@@ -205,24 +197,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         avatar_url: user.user_metadata?.avatar_url || null,
       };
 
-      const { data: createdProfile, error: insertError } = await supabase
+      const { data: createdProfile, error: insertError, status: insertStatus } = await supabase
         .from('profiles')
         .insert([newProfile])
         .select()
         .single();
 
       if (insertError) {
-        // If INSERT fails (RLS/policy), don't block the UI — fallback to minimal profile
-        console.error('profiles INSERT error for user', user.id, insertError);
-        const fallbackProfile = {
-          id: user.id,
-          username: user.email ? user.email.split('@')[0] : undefined,
-          full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || null,
-          avatar_url: (user.user_metadata as any)?.avatar_url || null,
-        };
-        setProfile(fallbackProfile as any);
+        console.error('[AuthContext] profiles INSERT error for user', user.id, insertError, 'status:', insertStatus);
+        setProfile(null);
         setNeedsTermsAcceptance(false);
         setNeedsUsernameSetup(false);
+        // Optionally: set a UI error flag here for display
         return;
       }
 
