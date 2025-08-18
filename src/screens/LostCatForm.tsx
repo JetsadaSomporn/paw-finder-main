@@ -118,7 +118,7 @@ const LostCatForm: React.FC = () => {
 
     document.body.appendChild(container);
 
-  const hintShiftRight = 32; // increased offset to better align under the Sign In link
+  const hintShiftRight = 64; // increased offset to better align under the Sign In link
 
     const updatePosition = () => {
       const rect = signinEl ? signinEl.getBoundingClientRect() : null;
