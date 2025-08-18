@@ -157,20 +157,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const supaUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
       const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
       if (!supaUrl || !anon) return null;
+      // Find an access token by scanning localStorage and sessionStorage.
+      // Different environments store tokens under different keys/structures; be tolerant.
+      const tryParse = (v: string | null) => {
+        if (!v) return null as any;
+        try { return JSON.parse(v); } catch { return v; }
+      };
 
-      // derive storage key: sb-<ref>-auth-token
       let token: string | null = null;
-      try {
-        const ref = new URL(supaUrl).host.split('.')[0];
-        const storageKey = `sb-${ref}-auth-token`;
-        const raw = localStorage.getItem(storageKey);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          token = parsed?.access_token || parsed?.currentSession?.access_token || null;
+      const scanStore = (store: Storage) => {
+        for (let i = store.length - 1; i >= 0; i--) {
+          const key = store.key(i);
+          if (!key) continue;
+          const raw = store.getItem(key);
+          if (!raw) continue;
+          const parsed = tryParse(raw);
+          // parsed may be object or string. Try common shapes.
+          if (parsed && typeof parsed === 'object') {
+            if (parsed.access_token && typeof parsed.access_token === 'string') return parsed.access_token;
+            if (parsed.currentSession && parsed.currentSession.access_token) return parsed.currentSession.access_token;
+            if (parsed.session && parsed.session.access_token) return parsed.session.access_token;
+            if (parsed?.data?.access_token) return parsed.data.access_token;
+            if (parsed?.token && typeof parsed.token === 'string') return parsed.token;
+            if (parsed?.provider_token && typeof parsed.provider_token === 'string') return parsed.provider_token;
+          } else if (typeof parsed === 'string') {
+            // maybe the raw value is the token itself
+            if (/^[A-Za-z0-9-_\.]+\.[A-Za-z0-9-_\.]+\.[A-Za-z0-9-_\.]+$/.test(parsed)) return parsed;
+          }
         }
-      } catch (e) {
-        // ignore parsing errors
-      }
+        return null;
+      };
+
+      token = scanStore(localStorage) || scanStore(sessionStorage) || null;
       if (!token) return null;
 
       const url = `${supaUrl}/rest/v1/profiles?id=eq.${userId}&select=*`;
@@ -211,6 +229,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               const parsed = JSON.parse(raw);
               const access_token = parsed?.access_token || parsed?.currentSession?.access_token || null;
               const refresh_token = parsed?.refresh_token || parsed?.currentSession?.refresh_token || null;
+              // Attempt a REST prefetch of the profile using stored token info so the UI can show
+              // a profile immediately on refresh even if supabase-js hasn't fully wired yet.
+              try {
+                const userIdFromStorage = parsed?.userId || parsed?.currentSession?.user?.id || null;
+                if (userIdFromStorage && access_token) {
+                  const prefetched = await restFetchProfileByUserId(userIdFromStorage);
+                  if (prefetched) {
+                    // set prefetched profile so header/UI can render quickly
+                    setProfile(prefetched as any);
+                    setNeedsTermsAcceptance(!prefetched.terms_accepted_at);
+                    setNeedsUsernameSetup(!prefetched.username);
+                    // ensure consumers don't stay in loading state
+                    setProfileLoading(false);
+                    // continue to wire session below
+                  }
+                }
+              } catch (e) {
+                // ignore prefetch errors
+              }
               if (access_token) {
                 // setSession is idempotent and will attach token to client for subsequent calls
                 // ignore result; we proceed to getSession() below
@@ -295,6 +332,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const handleUserProfile = async (user: User) => {
+    // If we've already prefetched a profile for this user, skip re-loading.
+    if (profile && profile.id === user.id && profile.username) {
+      // ensure flags are in sync
+      setNeedsTermsAcceptance(!profile.terms_accepted_at);
+      setNeedsUsernameSetup(!profile.username);
+      return;
+    }
+
     setProfileLoading(true);
     setProfileError(null);
     const step = 'handleUserProfile';
