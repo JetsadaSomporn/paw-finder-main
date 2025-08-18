@@ -27,6 +27,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
   loading: true,
+  profileLoading: false,
+  profileError: null,
   needsTermsAcceptance: false,
   needsUsernameSetup: false,
   updateProfile: async () => {},
