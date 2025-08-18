@@ -1,4 +1,4 @@
-import { supabasePublic as supabase } from "@/lib/supabasePublic";
+import restGet from "@/lib/restPublic";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { LostPet } from "../types";
@@ -25,16 +25,13 @@ export const useFetchLostPets = (): UseFetchLostPetsReturn => {
       setLoading(true);
       setError(null);
 
-      // Fetch lost pets and their images in a single relational select
-      const { data: pets, error: petsError } = await supabase
-        .from("lost_pets")
-        .select("*, lost_pet_images(*)")
-        .eq("status", "active")
-        .order("created_at", { ascending: false });
+      // Fetch lost pets and their images via anonymous REST (no Authorization header)
+      const rows = await restGet(
+        "lost_pets",
+        "?select=*,lost_pet_images(*)&status=eq.active&order=created_at.desc"
+      );
 
-      if (petsError) throw petsError;
-
-      const petsWithImages = (pets || []).map((pet: any) => ({
+      const petsWithImages = (rows || []).map((pet: any) => ({
         ...pet,
         images: (pet.lost_pet_images as any[]) || [],
       }));
