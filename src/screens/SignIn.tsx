@@ -1,4 +1,5 @@
-import { Lock, LogIn, Mail, Facebook, Chrome } from "lucide-react";
+import { Lock, LogIn, Mail, Facebook } from "lucide-react";
+import { FaGoogle } from 'react-icons/fa';
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -72,6 +73,8 @@ const SignIn = () => {
       setLoading(false);
     }
   };
+
+  
 
   return (
     <div className="min-h-screen bg-[#F7FFE0] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -182,7 +185,7 @@ const SignIn = () => {
               disabled={loading}
               className={`w-full flex items-center justify-center px-4 py-3 border rounded-lg font-medium transition-colors duration-200 bg-white hover:bg-gray-50 text-gray-700 border-gray-300`}
             >
-              <Chrome className="h-5 w-5 mr-2" />
+              <FaGoogle className="h-5 w-5 mr-2" />
               เข้าสู่ระบบด้วย Google
             </button>
           </div>

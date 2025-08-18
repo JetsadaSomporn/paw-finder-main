@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, UserPlus, User, X, FileText, Facebook, Chrome } from 'lucide-react';
+import { Mail, Lock, UserPlus, User, X, FileText, Facebook } from 'lucide-react';
+import { FaGoogle } from 'react-icons/fa';
 import { supabase } from '../lib/supabase';
 import { loadTermsOfService, loadPrivacyPolicy } from '../shared/utils/documentLoader.util';
 
@@ -91,6 +92,8 @@ const SignUp: React.FC = () => {
       setLoading(false);
     }
   };
+
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -374,7 +377,7 @@ const SignUp: React.FC = () => {
               }`}
               title={!acceptTerms ? 'กรุณายอมรับเงื่อนไขการใช้งานก่อน' : ''}
             >
-              <Chrome className="h-5 w-5 mr-2" />
+              <FaGoogle className="h-5 w-5 mr-2" />
               สมัครด้วย Google
             </button>
           </div>
