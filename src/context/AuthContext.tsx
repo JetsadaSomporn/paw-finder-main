@@ -17,6 +17,7 @@ interface AuthContextType {
   needsTermsAcceptance: boolean;
   needsUsernameSetup: boolean;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthContextType>({
   needsTermsAcceptance: false,
   needsUsernameSetup: false,
   updateProfile: async () => {},
+  signOut: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -54,6 +56,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       if (updates.username) {
         setNeedsUsernameSetup(false);
+      }
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error signing out from AuthContext:', error);
+        // continue to clear local state
+      }
+
+      // wait for auth state to clear (timeout after 3s)
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => {
+          resolve();
+        }, 3000);
+
+        try {
+          const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (!session?.user) {
+              clearTimeout(timeout);
+              subscription.unsubscribe();
+              resolve();
+            }
+          });
+        } catch (e) {
+          clearTimeout(timeout);
+          resolve();
+        }
+      });
+    } catch (e) {
+      console.error('Unexpected error during signOut in AuthContext:', e);
+    } finally {
+      // clear local auth state
+      try {
+        setUser(null);
+        setProfile(null);
+        setNeedsTermsAcceptance(false);
+        setNeedsUsernameSetup(false);
+
+        // Remove likely supabase keys from storage to avoid stale sessions
+        try {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (!key) continue;
+            const k = key.toLowerCase();
+            if (k.includes('supabase') || k.startsWith('sb:') || k.startsWith('sb-') || k.includes('auth')) {
+              localStorage.removeItem(key);
+            }
+          }
+        } catch (e) {
+          /* ignore */
+        }
+        try {
+          for (let i = sessionStorage.length - 1; i >= 0; i--) {
+            const key = sessionStorage.key(i);
+            if (!key) continue;
+            const k = key.toLowerCase();
+            if (k.includes('supabase') || k.startsWith('sb:') || k.startsWith('sb-') || k.includes('auth')) {
+              sessionStorage.removeItem(key);
+            }
+          }
+        } catch (e) {
+          /* ignore */
+        }
+      } catch (e) {
+        console.warn('Error clearing local auth state during signOut', e);
       }
     }
   };
@@ -133,7 +203,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         needsTermsAcceptance,
         needsUsernameSetup,
-        updateProfile
+  updateProfile,
+  signOut
       }}
     >
       {children}
