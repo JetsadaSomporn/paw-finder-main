@@ -170,12 +170,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const handleUserProfile = async (user: User) => {
-    // ดึง profile ที่มีอยู่
-    const { data: existingProfile } = await supabase
+    // ดึง profile ที่มีอยู่ (ตรวจ error เพื่อจับ RLS/permission failures)
+    const { data: existingProfile, error: selectError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single();
+
+    if (selectError) {
+      // Log error for debugging (dev only)
+      console.error('profiles SELECT error for user', user.id, selectError);
+      // ensure profile is null to fallback to email, but surface issue in console
+      setProfile(null);
+      setNeedsTermsAcceptance(false);
+      setNeedsUsernameSetup(false);
+      return;
+    }
 
     if (!existingProfile) {
       // ผู้ใช้ใหม่จาก Social Login - สร้าง profile
@@ -185,11 +195,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         avatar_url: user.user_metadata?.avatar_url || null,
       };
 
-      const { data: createdProfile } = await supabase
+      const { data: createdProfile, error: insertError } = await supabase
         .from('profiles')
         .insert([newProfile])
         .select()
         .single();
+
+      if (insertError) {
+        console.error('profiles INSERT error for user', user.id, insertError);
+        setProfile(null);
+        setNeedsTermsAcceptance(false);
+        setNeedsUsernameSetup(false);
+        return;
+      }
 
       setProfile(createdProfile || newProfile);
       setNeedsTermsAcceptance(true); // ผู้ใช้ใหม่ต้องยอมรับ Terms
