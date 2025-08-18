@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabasePublic as supabase } from "@/lib/supabasePublic";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { LostPet } from "../types";

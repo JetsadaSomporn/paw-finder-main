@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { MapPin, Calendar, Phone, Mail, Image as ImageIcon } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabasePublic as supabase } from '../../lib/supabasePublic';
 
 interface FoundPet {
   id: string;
