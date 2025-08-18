@@ -245,33 +245,30 @@ const LostCatForm: React.FC = () => {
           const fileExt = file.name.split('.').pop();
           const fileName = `${Math.random()}.${fileExt}`;
           // const filePath = `${lostPet.id}/${fileName}`;
-          const filePath = `public/${lostPet.id}/${fileName}`;
+          const filePath = `${lostPet.id}/${fileName}`;
           // const filePath = `${lostPet.id}/${Date.now()}-${fileName.replace(/\s+/g,'_')}`;
 
 
           // Upload the image to storage
-          console.log('[Upload] will upload', { filePath, name: file.name, size: file.size, type: file.type });
-          const { error: uploadError, data: uploadData } = await supabase.storage
+          const { error: uploadError } = await supabase.storage
             .from('lost-pet-images')
             .upload(filePath, file);
 
-          console.log('[Upload] upload result', { filePath, uploadData, uploadError });
           if (uploadError) throw uploadError;
 
           // Get the public URL
-          const { data: publicData } = supabase.storage.from('lost-pet-images').getPublicUrl(filePath);
-          console.log('[Upload] getPublicUrl', { filePath, publicData });
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from('lost-pet-images').getPublicUrl(filePath);
 
           // Insert the image record
-          const { error: imageError, data: imageInsert } = await supabase
+          const { error: imageError } = await supabase
             .from('lost_pet_images')
             .insert({
               lost_pet_id: lostPet.id,
-              image_url: publicData?.publicUrl,
-            })
-            .select();
+              image_url: publicUrl,
+            });
 
-          console.log('[Upload] image insert', { filePath, imageInsert, imageError });
           if (imageError) throw imageError;
         });
 
