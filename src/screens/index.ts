@@ -8,3 +8,4 @@ export { default as SignUp } from "./SignUp";
 export { default as EmailConfirmation } from "./EmailConfirmation";
 export { default as AuthCallback } from "./AuthCallback";
 export { default as SocialComplete } from "./SocialComplete";
+export { default as DataDeletion } from "./DataDeletion";

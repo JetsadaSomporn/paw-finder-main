@@ -12,6 +12,7 @@ import {
   SignIn,
   SignUp,
   SocialComplete,
+  DataDeletion,
 } from './screens';
 import Footer from './shared/components/Footer';
 import FoundPetsList from './shared/components/FoundPetsList';
@@ -37,6 +38,7 @@ function App() {
               <Route path="/signup" element={<SignUp />} />
               <Route path="/social-complete" element={<SocialComplete />} />
               <Route path="/email-confirmation" element={<EmailConfirmation />} />
+              <Route path="/data-deletion" element={<DataDeletion />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
             </Routes>
           </main>

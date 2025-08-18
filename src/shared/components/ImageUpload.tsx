@@ -19,9 +19,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   }, [currentFiles]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    console.log('📁 onDrop เรียกใช้แล้ว');
-    console.log('📷 ไฟล์ที่ยอมรับ:', acceptedFiles.length);
-    console.log('📋 ไฟล์ปัจจุบัน:', currentFiles.length);
+  
     
     // Log accepted files
     acceptedFiles.forEach((file, index) => {
