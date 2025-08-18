@@ -78,10 +78,9 @@ const FoundPetForm: React.FC = () => {
   const showSignInHint = () => {
     if (document.getElementById('auth-hint')) return;
     const signinEl = document.querySelector('a[href="/signin"]');
-    const rect = signinEl ? signinEl.getBoundingClientRect() : null;
     const container = document.createElement('div');
     container.id = 'auth-hint';
-    container.style.position = 'absolute';
+    container.style.position = 'fixed';
     container.style.zIndex = '10000';
     container.style.padding = '8px 12px';
     container.style.background = 'white';
@@ -90,35 +89,62 @@ const FoundPetForm: React.FC = () => {
     container.style.boxShadow = '0 6px 18px rgba(0,0,0,0.08)';
     container.style.fontSize = '14px';
     container.style.color = '#333';
+    container.style.width = '260px';
     container.innerHTML = `
-      <div style="display:flex;gap:8px;align-items:center;white-space:nowrap">
-        <div>กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
-        <button id="auth-hint-btn" style="background:#F4A261;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">เข้าสู่ระบบ</button>
+      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;white-space:nowrap">
+        <div style="flex:1">กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
+        <button id="auth-hint-btn" style="background:#F4A261;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;margin-left:8px">เข้าสู่ระบบ</button>
       </div>
     `;
     document.body.appendChild(container);
-    const left = rect ? rect.left + window.scrollX : window.innerWidth - 260;
-    const top = rect ? rect.bottom + window.scrollY + 8 : 72;
-    // center the hint under the sign-in element
-    if (rect) {
-      const hintWidth = 260;
-      let centeredLeft = rect.left + window.scrollX + rect.width / 2 - hintWidth / 2;
-      centeredLeft = Math.max(8, Math.min(centeredLeft, window.innerWidth - hintWidth - 8));
-      container.style.left = `${centeredLeft}px`;
-      container.style.width = `${hintWidth}px`;
-    } else {
-      container.style.left = `${left}px`;
-    }
-    container.style.top = `${top}px`;
+
+    const hintWidth = 260;
+    const updatePosition = () => {
+      const rect = signinEl ? signinEl.getBoundingClientRect() : null;
+      if (rect) {
+        let left = rect.left + rect.width / 2 - hintWidth / 2;
+        left = Math.max(8, Math.min(left, window.innerWidth - hintWidth - 8));
+        container.style.left = `${left}px`;
+        container.style.top = `${rect.bottom + 8}px`;
+      } else {
+        container.style.right = '16px';
+        container.style.top = '72px';
+      }
+    };
+
+    updatePosition();
+    window.addEventListener('scroll', updatePosition, { passive: true });
+    window.addEventListener('resize', updatePosition);
+
     const btn = container.querySelector('#auth-hint-btn') as HTMLButtonElement | null;
-    btn?.addEventListener('click', () => {
+    const removeHint = () => {
+      try {
+        window.removeEventListener('scroll', updatePosition);
+        window.removeEventListener('resize', updatePosition);
+      } catch (e) {}
       container.remove();
+    };
+
+    btn?.addEventListener('click', () => {
+      removeHint();
       navigate('/signin');
     });
-    setTimeout(() => {
-      const el = document.getElementById('auth-hint');
-      el?.remove();
+
+    const autoRemove = setTimeout(() => {
+      removeHint();
     }, 5000);
+
+    const observer = new MutationObserver(() => {
+      if (!document.body.contains(container)) {
+        clearTimeout(autoRemove);
+        try {
+          window.removeEventListener('scroll', updatePosition);
+          window.removeEventListener('resize', updatePosition);
+        } catch (e) {}
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
   };
 
   const onSubmit: SubmitHandler<FoundPetFormInputs> = async (data) => {
