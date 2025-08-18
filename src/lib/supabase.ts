@@ -13,3 +13,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
   },
 });
+
+// Expose the client to window in development for easier debugging from DevTools
+// (will not run in production builds)
+if (import.meta.env.DEV) {
+  try {
+    // @ts-ignore - attach for debugging only
+    (window as any).supabase = supabase;
+  } catch (e) {
+    // ignore in environments where window is not available
+  }
+}
