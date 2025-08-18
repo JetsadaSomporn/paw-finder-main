@@ -244,10 +244,7 @@ const LostCatForm: React.FC = () => {
         const imagePromises = data.images.map(async (file) => {
           const fileExt = file.name.split('.').pop();
           const fileName = `${Math.random()}.${fileExt}`;
-          // const filePath = `${lostPet.id}/${fileName}`;
-          const filePath = `${lostPet.id}/${fileName}`;
-          // const filePath = `${lostPet.id}/${Date.now()}-${fileName.replace(/\s+/g,'_')}`;
-
+          const filePath = `public/${lostPet.id}/${fileName}`;
 
           // Upload the image to storage
           const { error: uploadError } = await supabase.storage
@@ -274,7 +271,6 @@ const LostCatForm: React.FC = () => {
 
         await Promise.all(imagePromises);
       }
-
       toast.success('ส่งข้อมูลสำเร็จ! เราจะติดต่อกลับโดยเร็วที่สุด');
       reset();
     } catch (error: any) {
