@@ -23,8 +23,42 @@ const Header: React.FC = () => {
     } catch (error) {
       console.error('Error signing out:', error);
     } finally {
-      // Force a full reload/redirect to clear any provider session state
-      // and ensure the UI reflects the logged-out state.
+      // Debug: log session after signOut
+      try {
+        supabase.auth.getSession().then(({ data }) => console.log('session after signOut:', data));
+      } catch (e) {
+        console.warn('Could not get session after signOut', e);
+      }
+
+      // Clear common Supabase auth keys from localStorage/sessionStorage to avoid stale client state
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (!key) continue;
+          const k = key.toLowerCase();
+          if (k.includes('supabase') || k.startsWith('sb:') || k.startsWith('sb-') || k.includes('auth')) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((k) => localStorage.removeItem(k));
+
+        // sessionStorage cleanup
+        const sKeysToRemove: string[] = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (!key) continue;
+          const k = key.toLowerCase();
+          if (k.includes('supabase') || k.startsWith('sb:') || k.startsWith('sb-') || k.includes('auth')) {
+            sKeysToRemove.push(key);
+          }
+        }
+        sKeysToRemove.forEach((k) => sessionStorage.removeItem(k));
+      } catch (e) {
+        console.warn('Error clearing storage after signOut', e);
+      }
+
+      // Finally redirect to ensure UI reloads and context is re-initialized
       try {
         window.location.assign('/');
       } catch (e) {
