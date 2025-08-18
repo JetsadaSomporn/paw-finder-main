@@ -250,7 +250,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               // Attempt a REST prefetch of the profile using stored token info so the UI can show
               // a profile immediately on refresh even if supabase-js hasn't fully wired yet.
               try {
-                const userIdFromStorage = parsed?.userId || parsed?.currentSession?.user?.id || null;
+                const userIdFromStorage =
+                  parsed?.userId ||
+                  parsed?.currentSession?.user?.id ||
+                  parsed?.user?.id ||
+                  null;
                 if (userIdFromStorage && access_token) {
                   const prefetched = await restFetchProfileByUserId(userIdFromStorage);
                   if (prefetched) {
@@ -355,8 +359,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Listen for changes on auth state (sign in, sign out, etc.)
     const authListener = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
-        // Only clear profile on explicit sign-out-like events to avoid transient clears
-        if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        const evt = event as any as string;
+        // Only clear profile on explicit sign-out-like events if known
+        if (evt === 'SIGNED_OUT' || evt === 'USER_DELETED') {
           setUser(null);
           setProfile(null);
           setNeedsTermsAcceptance(false);
@@ -364,7 +369,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfileError({
             type: 'no_session',
             step: 'onAuthStateChange',
-            message: `No session/user in onAuthStateChange (${event})`,
+            message: `No session/user in onAuthStateChange (${evt})`,
             timestamp: new Date().toISOString(),
           });
           return;
@@ -376,10 +381,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await handleUserProfile(session.user);
-        } else {
+        // If session is null (but we are past init), double-check current session before clearing.
+        if (!session) {
+          try {
+            const { data } = await supabase.auth.getSession();
+            if (data?.session?.user) {
+              // session recovered immediately; treat as signed in
+              setUser(data.session.user as any);
+              await handleUserProfile(data.session.user as User);
+              return;
+            }
+          } catch (e) {
+            // fall through to clearing below
+            if (process.env.NODE_ENV === 'development') console.info('[AuthContext] getSession check failed in onAuthStateChange', e);
+          }
+
+          // confirmed no session -> clear
+          setUser(null);
           setProfile(null);
           setNeedsTermsAcceptance(false);
           setNeedsUsernameSetup(false);
@@ -389,6 +407,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             message: 'No session/user in onAuthStateChange',
             timestamp: new Date().toISOString(),
           });
+          return;
+        }
+
+        // Normal signed-in flow
+        setUser(session.user ?? null);
+        if (session.user) {
+          await handleUserProfile(session.user);
         }
       } catch (e) {
         if (process.env.NODE_ENV === 'development') console.error('[AuthContext] onAuthStateChange handler error', e);
@@ -691,9 +716,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         stopWatchdog();
         devLog('done', { userId: user.id, duration: Date.now() - startTs });
       } else {
-        setProfile(existingProfile);
+        // Merge existingProfile into state but avoid letting null fields overwrite previously-known values
+        setProfile(prev => {
+          const merged = { ...(prev || {}), ...(existingProfile as any) } as Profile;
+          // If previous state had a username but DB returned null, keep prev.username
+          if (prev?.username && (existingProfile as any).username == null) {
+            merged.username = prev.username;
+          }
+          return merged;
+        });
         setNeedsTermsAcceptance(!existingProfile.terms_accepted_at);
-        setNeedsUsernameSetup(!existingProfile.username);
+        // If DB has no username, fall back to whatever we already have in state
+        setNeedsUsernameSetup(!(existingProfile.username ?? (profile?.username)));
         setProfileLoading(false);
         stopWatchdog();
         devLog('done', { userId: user.id, duration: Date.now() - startTs });
