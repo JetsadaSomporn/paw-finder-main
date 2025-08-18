@@ -1,4 +1,4 @@
-import restGet from "@/lib/restPublic";
+import { supabase } from "@/lib/supabase";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { FoundPet } from "../types";
@@ -25,16 +25,43 @@ export const useFetchFoundPets = (): UseFetchFoundPetsReturn => {
       setLoading(true);
       setError(null);
 
-      // Fetch found pets and their images via anonymous REST (no Authorization header)
-      const rows = await restGet(
-        "found_pets",
-        "?select=*,found_pet_images(*)&status=eq.active&order=created_at.desc"
-      );
+      // Fetch found pets data
+      const { data: pets, error: petsError } = await supabase
+        .from("found_pets")
+        .select("*")
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
 
-      const petsWithImages = (rows || []).map((pet: any) => ({
-        ...pet,
-        images: (pet.found_pet_images as any[]) || [],
-      }));
+      if (petsError) {
+        throw petsError;
+      }
+
+      // Fetch images for each found pet
+      const petsWithImages = await Promise.all(
+        pets.map(async (pet) => {
+          const { data: images, error: imagesError } = await supabase
+            .from("found_pet_images")
+            .select("*")
+            .eq("found_pet_id", pet.id);
+
+          if (imagesError) {
+            console.warn(
+              `Error fetching images for found pet ${pet.id}:`,
+              imagesError
+            );
+            // Don't throw error for images, just continue without them
+            return {
+              ...pet,
+              images: [],
+            };
+          }
+
+          return {
+            ...pet,
+            images: images || [],
+          };
+        })
+      );
 
       setFoundPets(petsWithImages);
     } catch (err) {
