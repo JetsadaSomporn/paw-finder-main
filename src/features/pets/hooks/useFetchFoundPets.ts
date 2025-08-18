@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { useState, useEffect } from "react";
+import { useAuth } from '@/context/AuthContext';
 import toast from "react-hot-toast";
 import { FoundPet } from "../types";
 
@@ -15,15 +16,24 @@ interface UseFetchFoundPetsReturn {
   refetch: () => Promise<void>;
 }
 
-export const useFetchFoundPets = (): UseFetchFoundPetsReturn => {
+export const useFetchFoundPets = (requireAuth = false): UseFetchFoundPetsReturn => {
   const [foundPets, setFoundPets] = useState<FoundPet[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { user } = useAuth();
 
   const fetchFoundPets = async () => {
     try {
       setLoading(true);
       setError(null);
+
+      // If the caller requires an authenticated user, avoid firing queries when no user id is present
+      if (requireAuth && !user?.id) {
+        setFoundPets([]);
+        setLoading(false);
+        return;
+      }
 
       // Fetch found pets data
       const { data: pets, error: petsError } = await supabase

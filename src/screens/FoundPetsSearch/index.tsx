@@ -26,7 +26,7 @@ const DEFAULT_FILTERS: PetFilters = {
 export const DEFAULT_MAP_CENTER: [number, number] = [13.7563, 100.5018];
 
 export const FoundPetsSearch: React.FC = () => {
-  const { foundPets, loading, error } = useFetchFoundPets();
+  const { foundPets, loading, error } = useFetchFoundPets(true);
 
   const {
     location,

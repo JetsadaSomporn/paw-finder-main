@@ -27,7 +27,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 };
 
 export const useRewardsPageLogic = () => {
-  const { lostPets, loading, error } = useFetchLostPets();
+  const { lostPets, loading, error } = useFetchLostPets(true);
   const routerLocation = useRouterLocation();
   const routeState = (routerLocation.state as any) || {};
   // Prefer state.ll; fallback to query param ?ll=lat,lng
