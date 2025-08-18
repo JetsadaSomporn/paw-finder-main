@@ -244,7 +244,8 @@ const LostCatForm: React.FC = () => {
         const imagePromises = data.images.map(async (file) => {
           const fileExt = file.name.split('.').pop();
           const fileName = `${Math.random()}.${fileExt}`;
-          const filePath = `public/${lostPet.id}/${fileName}`;
+          const filePath = `${lostPet.id}/${fileName}`;
+          // const filePath = `public/${lostPet.id}/${fileName}`;
 
           // Upload the image to storage
           const { error: uploadError } = await supabase.storage
