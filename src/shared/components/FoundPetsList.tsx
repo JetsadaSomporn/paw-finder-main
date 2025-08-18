@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { MapPin, Calendar, Phone, Mail, Image as ImageIcon } from 'lucide-react';
-import { supabasePublic as supabase } from '../../lib/supabasePublic';
+import { supabase } from '../../lib/supabase';
 
 interface FoundPet {
   id: string;
@@ -39,19 +39,32 @@ const FoundPetsList: React.FC = () => {
   const fetchFoundPets = async () => {
     try {
       setLoading(true);
-      // Fetch found pets and their images using a relational select via anonymous client
+      
+      // Fetch found pets with their images
       const { data: pets, error: petsError } = await supabase
         .from('found_pets')
-        .select('*, found_pet_images(*)')
+        .select('*')
         .eq('status', 'active')
         .order('created_at', { ascending: false });
 
       if (petsError) throw petsError;
 
-      const petsWithImages = (pets || []).map((pet: any) => ({
-        ...pet,
-        images: (pet.found_pet_images as any[]) || [],
-      }));
+      // Fetch images for each pet
+      const petsWithImages = await Promise.all(
+        pets.map(async (pet) => {
+          const { data: images, error: imagesError } = await supabase
+            .from('found_pet_images')
+            .select('*')
+            .eq('found_pet_id', pet.id);
+
+          if (imagesError) throw imagesError;
+
+          return {
+            ...pet,
+            images: images || []
+          };
+        })
+      );
 
       setFoundPets(petsWithImages);
     } catch (error) {
