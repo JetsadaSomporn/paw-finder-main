@@ -94,23 +94,54 @@ const LostCatForm: React.FC = () => {
 
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  // show a small hint anchored under the header sign-in link
+  const showSignInHint = () => {
+    // avoid duplicate hints
+    if (document.getElementById('auth-hint')) return;
+
+    const signinEl = document.querySelector('a[href="/signin"]');
+    const rect = signinEl ? signinEl.getBoundingClientRect() : null;
+    const container = document.createElement('div');
+    container.id = 'auth-hint';
+    container.style.position = 'absolute';
+    container.style.zIndex = '10000';
+    container.style.padding = '8px 12px';
+    container.style.background = 'white';
+    container.style.border = '1px solid rgba(0,0,0,0.08)';
+    container.style.borderRadius = '8px';
+    container.style.boxShadow = '0 6px 18px rgba(0,0,0,0.08)';
+    container.style.fontSize = '14px';
+    container.style.color = '#333';
+    container.innerHTML = `
+      <div style="display:flex;gap:8px;align-items:center;white-space:nowrap">
+        <div>กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
+        <button id="auth-hint-btn" style="background:#F4A261;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">เข้าสู่ระบบ</button>
+      </div>
+    `;
+
+    document.body.appendChild(container);
+    const left = rect ? rect.left + window.scrollX : window.innerWidth - 260;
+    const top = rect ? rect.bottom + window.scrollY + 8 : 72;
+    container.style.left = `${left}px`;
+    container.style.top = `${top}px`;
+
+    const btn = container.querySelector('#auth-hint-btn') as HTMLButtonElement | null;
+    btn?.addEventListener('click', () => {
+      container.remove();
+      navigate('/signin');
+    });
+
+    // auto remove after 5 seconds
+    setTimeout(() => {
+      const el = document.getElementById('auth-hint');
+      el?.remove();
+    }, 5000);
+  };
 
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
     if (!user) {
-  toast((t: any) => (
-        <div className="flex items-center gap-4">
-          <div>กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
-          <button
-            onClick={() => {
-              toast.dismiss(t.id);
-              navigate('/signin');
-            }}
-            className="px-3 py-1 bg-[#F4A261] text-white rounded"
-          >
-            เข้าสู่ระบบ
-          </button>
-        </div>
-  ), { position: 'top-right', style: { right: '140px' } });
+      showSignInHint();
       return;
     }
     try {
