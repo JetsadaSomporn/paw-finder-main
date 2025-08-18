@@ -91,10 +91,7 @@ const FoundPetForm: React.FC = () => {
     container.style.color = '#333';
     container.style.width = '260px';
     container.innerHTML = `
-      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;white-space:nowrap">
-        <div style="flex:1">กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
-        <button id="auth-hint-btn" style="background:#F4A261;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;margin-left:8px">เข้าสู่ระบบ</button>
-      </div>
+      <div style="white-space:nowrap;padding:6px 12px">กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
     `;
     document.body.appendChild(container);
 
@@ -120,19 +117,13 @@ const FoundPetForm: React.FC = () => {
     window.addEventListener('scroll', updatePosition, { passive: true });
     window.addEventListener('resize', updatePosition);
 
-    const btn = container.querySelector('#auth-hint-btn') as HTMLButtonElement | null;
-    const removeHint = () => {
+  const removeHint = () => {
       try {
         window.removeEventListener('scroll', updatePosition);
         window.removeEventListener('resize', updatePosition);
       } catch (e) {}
       container.remove();
     };
-
-    btn?.addEventListener('click', () => {
-      removeHint();
-      navigate('/signin');
-    });
 
     const autoRemove = setTimeout(() => {
       removeHint();
