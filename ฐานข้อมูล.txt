@@ -1,0 +1,115 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.found_pet_images (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  found_pet_id uuid,
+  image_url text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT found_pet_images_pkey PRIMARY KEY (id),
+  CONSTRAINT found_pet_images_found_pet_id_fkey FOREIGN KEY (found_pet_id) REFERENCES public.found_pets(id)
+);
+CREATE TABLE public.found_pets (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  pet_type text NOT NULL CHECK (pet_type = ANY (ARRAY['cat'::text, 'dog'::text])),
+  breed text NOT NULL,
+  color text,
+  found_date date NOT NULL,
+  location text NOT NULL,
+  province text NOT NULL,
+  latitude numeric,
+  longitude numeric,
+  details text,
+  contact_name text NOT NULL,
+  contact_phone text NOT NULL,
+  contact_email text NOT NULL,
+  status text DEFAULT 'active'::text CHECK (status = ANY (ARRAY['active'::text, 'claimed'::text, 'closed'::text])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  pattern text,
+  colors text,
+  sex text NOT NULL DEFAULT 'unknown'::text CHECK (sex = ANY (ARRAY['male'::text, 'female'::text, 'unknown'::text])),
+  has_collar boolean NOT NULL DEFAULT false,
+  CONSTRAINT found_pets_pkey PRIMARY KEY (id),
+  CONSTRAINT found_pets_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.lost_cat_images (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  lost_cat_id uuid,
+  image_url text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT lost_cat_images_pkey PRIMARY KEY (id),
+  CONSTRAINT lost_cat_images_lost_cat_id_fkey FOREIGN KEY (lost_cat_id) REFERENCES public.lost_cats(id)
+);
+CREATE TABLE public.lost_cats (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  cat_name text NOT NULL,
+  breed text NOT NULL,
+  color text NOT NULL,
+  date_of_birth date NOT NULL,
+  lost_date date NOT NULL,
+  location text NOT NULL,
+  province text NOT NULL,
+  reward numeric,
+  details text,
+  contact_name text NOT NULL,
+  contact_phone text NOT NULL,
+  contact_email text NOT NULL,
+  status text DEFAULT 'active'::text CHECK (status = ANY (ARRAY['active'::text, 'found'::text, 'closed'::text])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT lost_cats_pkey PRIMARY KEY (id),
+  CONSTRAINT lost_cats_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.lost_pet_images (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  lost_pet_id uuid,
+  image_url text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT lost_pet_images_pkey PRIMARY KEY (id),
+  CONSTRAINT lost_pet_images_lost_pet_id_fkey FOREIGN KEY (lost_pet_id) REFERENCES public.lost_pets(id)
+);
+CREATE TABLE public.lost_pets (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  pet_type text NOT NULL CHECK (pet_type = ANY (ARRAY['cat'::text, 'dog'::text])),
+  pet_name text NOT NULL,
+  breed text NOT NULL,
+  color text,
+  date_of_birth date NOT NULL,
+  lost_date date NOT NULL,
+  location text NOT NULL,
+  province text NOT NULL,
+  reward numeric,
+  details text,
+  contact_name text NOT NULL,
+  contact_phone text NOT NULL,
+  contact_email text NOT NULL,
+  status text DEFAULT 'active'::text CHECK (status = ANY (ARRAY['active'::text, 'found'::text, 'closed'::text])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  age_years integer NOT NULL DEFAULT 0,
+  age_months integer NOT NULL DEFAULT 0 CHECK (age_months >= 0 AND age_months <= 11),
+  latitude real,
+  longitude real,
+  colors text,
+  pattern text,
+  sex text NOT NULL DEFAULT 'unknown'::text CHECK (sex = ANY (ARRAY['male'::text, 'female'::text, 'unknown'::text])),
+  has_collar boolean NOT NULL DEFAULT false,
+  CONSTRAINT lost_pets_pkey PRIMARY KEY (id),
+  CONSTRAINT lost_pets_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.profiles (
+  id uuid NOT NULL,
+  updated_at timestamp with time zone,
+  username text UNIQUE,
+  full_name text,
+  avatar_url text,
+  website text,
+  terms_accepted_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);

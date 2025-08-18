@@ -1,4 +1,4 @@
-import { Lock, LogIn, Mail } from "lucide-react";
+import { Lock, LogIn, Mail, Facebook, Chrome } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -36,6 +36,38 @@ const SignIn = () => {
       }
     } catch (error: any) {
       setError(error.message || "เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFacebookSignIn = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: { redirectTo: `${window.location.origin}/auth/callback` }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย Facebook');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/auth/callback` }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย Google');
     } finally {
       setLoading(false);
     }
@@ -119,6 +151,39 @@ const SignIn = () => {
                 <LogIn className="h-5 w-5 text-white group-hover:text-white" />
               </span>
               {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-[#F7FFE0] text-gray-500">หรือ</span>
+            </div>
+          </div>
+
+          {/* Social Sign In Buttons */}
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={handleFacebookSignIn}
+              disabled={loading}
+              className={`w-full flex items-center justify-center px-4 py-3 border rounded-lg text-white font-medium transition-colors duration-200 bg-[#1877F2] hover:bg-[#166FE5]`}
+            >
+              <Facebook className="h-5 w-5 mr-2" />
+              เข้าสู่ระบบด้วย Facebook
+            </button>
+
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className={`w-full flex items-center justify-center px-4 py-3 border rounded-lg font-medium transition-colors duration-200 bg-white hover:bg-gray-50 text-gray-700 border-gray-300`}
+            >
+              <Chrome className="h-5 w-5 mr-2" />
+              เข้าสู่ระบบด้วย Google
             </button>
           </div>
 

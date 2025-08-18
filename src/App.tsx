@@ -11,6 +11,7 @@ import {
   RewardsPage,
   SignIn,
   SignUp,
+  SocialComplete,
 } from './screens';
 import Footer from './shared/components/Footer';
 import FoundPetsList from './shared/components/FoundPetsList';
@@ -34,6 +35,7 @@ function App() {
               <Route path="/search" element={<LostPetsSearch />} />
               <Route path="/signin" element={<SignIn />} />
               <Route path="/signup" element={<SignUp />} />
+              <Route path="/social-complete" element={<SocialComplete />} />
               <Route path="/email-confirmation" element={<EmailConfirmation />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
             </Routes>

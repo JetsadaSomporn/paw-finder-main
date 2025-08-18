@@ -21,11 +21,36 @@ const AuthCallback = () => {
         }
 
         if (data.session) {
-          setStatus('success');
-          setMessage('ยืนยันอีเมลสำเร็จ! กำลังนำคุณไปยังหน้าหลัก...');
-          setTimeout(() => {
-            navigate('/');
-          }, 2000);
+          // Check if profile exists and has username/terms
+          try {
+            const user = data.session.user;
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+
+            const needsUsername = !profileData || !profileData.username;
+            const needsTerms = !profileData || !profileData.terms_accepted_at;
+
+            if (needsUsername || needsTerms) {
+              // redirect to social complete page
+              navigate('/social-complete');
+              return;
+            }
+
+            setStatus('success');
+            setMessage('ยืนยันอีเมลสำเร็จ! กำลังนำคุณไปยังหน้าหลัก...');
+            setTimeout(() => {
+              navigate('/');
+            }, 1200);
+            return;
+          } catch (err) {
+            console.error('Error checking profile:', err);
+            setStatus('error');
+            setMessage('เกิดข้อผิดพลาดขณะตรวจสอบโปรไฟล์');
+            return;
+          }
         } else {
           setStatus('error');
           setMessage('ไม่พบข้อมูลการยืนยัน');

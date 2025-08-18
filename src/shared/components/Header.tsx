@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { Link, useLocation as useRouterLocation } from 'react-router-dom';
 
 const Header: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const routerLocation = useRouterLocation();
   const currentState = (routerLocation.state as any) || undefined;
@@ -83,7 +83,7 @@ const Header: React.FC = () => {
             {user ? (
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-gray-700">
-                  สวัสดี, {user.email}
+                  สวัสดี, {profile?.username || user.email?.split('@')[0] || 'ผู้ใช้'}
                 </span>
                 <button
                   onClick={handleSignOut}
@@ -170,7 +170,9 @@ const Header: React.FC = () => {
             </Link>
             {user ? (
               <div className="px-3 py-2 space-y-2">
-                <p className="text-sm text-gray-700">สวัสดี, {user.email}</p>
+                <p className="text-sm text-gray-700">
+                  สวัสดี, {profile?.username || user.email?.split('@')[0] || 'ผู้ใช้'}
+                </p>
                 <button
                   onClick={handleSignOut}
                   className="flex items-center w-full px-3 py-2 text-base font-medium text-white bg-[#F4A261] hover:bg-[#FF5A4A] rounded-md"
