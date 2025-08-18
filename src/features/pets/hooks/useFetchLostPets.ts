@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
 import toast from "react-hot-toast";
 import { LostPet } from "../types";
 
@@ -15,60 +16,52 @@ interface UseFetchLostPetsReturn {
   refetch: () => Promise<void>;
 }
 
-export const useFetchLostPets = (): UseFetchLostPetsReturn => {
+export const useFetchLostPets = (requireAuth = false): UseFetchLostPetsReturn => {
   const [lostPets, setLostPets] = useState<LostPet[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
   const fetchLostPets = async () => {
     try {
       setLoading(true);
       setError(null);
-      const withTimeout = <T,>(p: Promise<T>, ms = 8000): Promise<T> => {
-        return Promise.race([
-          p,
-          new Promise<T>((_, rej) =>
-            setTimeout(() => rej(new Error('timeout')), ms)
-          ),
-        ] as Promise<T>[]);
-      };
 
-      let pets: any[] = [];
-      try {
-        const res: any = await withTimeout(
-          (supabase
-            .from('lost_pets')
-            .select('*')
-            .eq('status', 'active')
-            .order('created_at', { ascending: false }) as any),
-          10000
-        );
-        if (res.error) throw res.error;
-        pets = res.data || [];
-      } catch (e: any) {
-        console.error('Error or timeout fetching lost_pets:', e);
-        throw e;
+      // Fetch lost pets data
+      const { data: pets, error: petsError } = await supabase
+        .from("lost_pets")
+        .select("*")
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+
+      if (petsError) {
+        throw petsError;
       }
 
+      // Fetch images for each pet
       const petsWithImages = await Promise.all(
         pets.map(async (pet) => {
-          try {
-            const res: any = await withTimeout(
-              (supabase
-                .from('lost_pet_images')
-                .select('*')
-                .eq('lost_pet_id', pet.id) as any),
-              8000
+          const { data: images, error: imagesError } = await supabase
+            .from("lost_pet_images")
+            .select("*")
+            .eq("lost_pet_id", pet.id);
+
+          if (imagesError) {
+            console.warn(
+              `Error fetching images for pet ${pet.id}:`,
+              imagesError
             );
-            if (res.error) {
-              console.warn(`Error fetching images for pet ${pet.id}:`, res.error);
-              return { ...pet, images: [] };
-            }
-            return { ...pet, images: res.data || [] };
-          } catch (e: any) {
-            console.warn(`Timeout/error fetching images for pet ${pet.id}:`, e?.message || e);
-            return { ...pet, images: [] };
+            // Don't throw error for images, just continue without them
+            return {
+              ...pet,
+              images: [],
+            };
           }
+
+          return {
+            ...pet,
+            images: images || [],
+          };
         })
       );
 
@@ -89,8 +82,14 @@ export const useFetchLostPets = (): UseFetchLostPetsReturn => {
   };
 
   useEffect(() => {
+    if (requireAuth && !user?.id) {
+      setLostPets([]);
+      setLoading(true);
+      return;
+    }
+
     fetchLostPets();
-  }, []);
+  }, [requireAuth, user?.id]);
 
   return {
     lostPets,
