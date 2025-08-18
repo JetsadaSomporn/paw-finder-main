@@ -275,18 +275,13 @@ const LostCatForm: React.FC = () => {
       toast.success('ส่งข้อมูลสำเร็จ! เราจะติดต่อกลับโดยเร็วที่สุด');
       reset();
     } catch (error: any) {
-      // Log full error for debugging
-      console.error('Error submitting form:', error);
+      // Keep debug logging in development only
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error submitting form:', error);
+      }
 
-      // Prefer common message fields, fall back to stringified object
-      const errMsg =
-        error?.message || error?.msg || error?.error_description || error?.error ||
-        (typeof error === 'string' ? error : JSON.stringify(error, Object.getOwnPropertyNames(error)));
-
-      // Shorten for UI but keep full object in console
-      const shortMsg = typeof errMsg === 'string' ? errMsg.slice(0, 300) : String(errMsg);
-
-      toast.error(`เกิดข้อผิดพลาด: ${shortMsg}`);
+      // Show a generic message to users in production
+      toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     }
   };
 

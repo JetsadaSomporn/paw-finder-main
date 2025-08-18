@@ -16,28 +16,38 @@ const Header: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
+      // Step 1: Call Supabase signOut
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Error signing out:', error);
-      }
-    } catch (error) {
-      console.error('Error signing out:', error);
-    } finally {
-      // Debug: log session after signOut
-      try {
-        supabase.auth.getSession().then(({ data }) => console.log('session after signOut:', data));
-      } catch (e) {
-        console.warn('Could not get session after signOut', e);
+        throw error;
       }
 
-      // Clear common Supabase auth keys from localStorage/sessionStorage to avoid stale client state
+      // Step 2: Wait for auth state to clear completely (with timeout)
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => {
+          console.warn('Sign out timeout - proceeding with redirect');
+          resolve();
+        }, 3000); // 3 second timeout
+        
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if (event === 'SIGNED_OUT' || !session?.user) {
+            clearTimeout(timeout);
+            subscription.unsubscribe();
+            resolve();
+          }
+        });
+      });
+
+      // Step 3: Clear storage including Google OAuth specific keys
       try {
         const keysToRemove: string[] = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
           if (!key) continue;
           const k = key.toLowerCase();
-          if (k.includes('supabase') || k.startsWith('sb:') || k.startsWith('sb-') || k.includes('auth')) {
+          if (k.includes('supabase') || k.startsWith('sb:') || k.startsWith('sb-') || 
+              k.includes('auth') || k.includes('google') || k.includes('oauth')) {
             keysToRemove.push(key);
           }
         }
@@ -49,7 +59,8 @@ const Header: React.FC = () => {
           const key = sessionStorage.key(i);
           if (!key) continue;
           const k = key.toLowerCase();
-          if (k.includes('supabase') || k.startsWith('sb:') || k.startsWith('sb-') || k.includes('auth')) {
+          if (k.includes('supabase') || k.startsWith('sb:') || k.startsWith('sb-') || 
+              k.includes('auth') || k.includes('google') || k.includes('oauth')) {
             sKeysToRemove.push(key);
           }
         }
@@ -58,12 +69,29 @@ const Header: React.FC = () => {
         console.warn('Error clearing storage after signOut', e);
       }
 
-      // Finally redirect to ensure UI reloads and context is re-initialized
+      // Step 4: Debug log final session state
       try {
-        window.location.assign('/');
+        const { data } = await supabase.auth.getSession();
+        console.log('Final session after signOut:', data);
       } catch (e) {
-        window.location.reload();
+        console.warn('Could not get final session state', e);
       }
+
+      // Step 5: Redirect to home and ensure page reload
+      window.location.assign('/');
+      
+    } catch (error) {
+      console.error('Error during sign out process:', error);
+      
+      // Force storage cleanup and redirect even if signOut API fails
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (e) {
+        console.warn('Error clearing storage in error handler', e);
+      }
+      
+      window.location.assign('/');
     }
   };
 
