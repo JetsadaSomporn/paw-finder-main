@@ -81,7 +81,7 @@ const FoundPetForm: React.FC = () => {
     const container = document.createElement('div');
     container.id = 'auth-hint';
     container.style.position = 'fixed';
-    container.style.zIndex = '10000';
+  container.style.zIndex = '20000';
     container.style.padding = '8px 12px';
     container.style.background = 'white';
     container.style.border = '1px solid rgba(0,0,0,0.08)';
@@ -98,15 +98,19 @@ const FoundPetForm: React.FC = () => {
     `;
     document.body.appendChild(container);
 
-    const hintWidth = 260;
+  const baseHintWidth = 260;
+  const minExpandedWidth = 520;
     const updatePosition = () => {
       const rect = signinEl ? signinEl.getBoundingClientRect() : null;
       if (rect) {
-        let left = rect.left + rect.width / 2 - hintWidth / 2;
-        left = Math.max(8, Math.min(left, window.innerWidth - hintWidth - 8));
+        const desiredWidth = Math.max(minExpandedWidth, rect.width + 80, baseHintWidth);
+        let left = rect.left + rect.width / 2 - desiredWidth / 2;
+        left = Math.max(8, Math.min(left, window.innerWidth - desiredWidth - 8));
+        container.style.width = `${desiredWidth}px`;
         container.style.left = `${left}px`;
         container.style.top = `${rect.bottom + 8}px`;
       } else {
+        container.style.width = `${minExpandedWidth}px`;
         container.style.right = '16px';
         container.style.top = '72px';
       }
