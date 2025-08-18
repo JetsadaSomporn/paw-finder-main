@@ -26,6 +26,8 @@ interface MapSelectorProps {
   onLocationSelect: (lat: number, lng: number) => void;
   initialLat?: number;
   initialLng?: number;
+  // called only when the user actively sets/changes the location (click, drag, search select, or clicking current-location button)
+  onUserLocationSelect?: (lat: number, lng: number) => void;
 }
 
 interface PlaceResult {
@@ -49,7 +51,7 @@ function MapClickHandler({
 }: {
   onLocationSelect: (lat: number, lng: number) => void;
 }) {
-  const map = useMapEvents({
+  useMapEvents({
     click: (e) => {
       onLocationSelect(e.latlng.lat, e.latlng.lng);
     },
@@ -74,6 +76,7 @@ function MapController({ center }: { center: [number, number] }) {
 
 const MapSelector: React.FC<MapSelectorProps> = ({
   onLocationSelect,
+  onUserLocationSelect,
   initialLat = 13.7563, // Bangkok coordinates as default
   initialLng = 100.5018,
 }) => {
@@ -81,9 +84,8 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     initialLat,
     initialLng,
   ]);
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(
-    null
-  );
+  // track user location in a ref because we don't read the state value directly
+  const userLocationRef = useRef<[number, number] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<PlaceResult[]>([]);
@@ -101,7 +103,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
         (pos) => {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
-          setUserLocation([lat, lng]);
+          userLocationRef.current = [lat, lng];
           setPosition([lat, lng]);
           onLocationSelect(lat, lng);
         },
@@ -121,6 +123,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
   const handleMapClick = (lat: number, lng: number) => {
     setPosition([lat, lng]);
     onLocationSelect(lat, lng);
+    if (typeof onUserLocationSelect === 'function') onUserLocationSelect(lat, lng);
   };
 
   const handleMarkerDragEnd = (event: any) => {
@@ -128,6 +131,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     const newPosition = marker.getLatLng();
     setPosition([newPosition.lat, newPosition.lng]);
     onLocationSelect(newPosition.lat, newPosition.lng);
+  if (typeof onUserLocationSelect === 'function') onUserLocationSelect(newPosition.lat, newPosition.lng);
   };
 
   // Get current location function
@@ -153,9 +157,10 @@ const MapSelector: React.FC<MapSelectorProps> = ({
             highAccuracy,
           });
 
-          setUserLocation([lat, lng]);
+          userLocationRef.current = [lat, lng];
           setPosition([lat, lng]);
           onLocationSelect(lat, lng);
+          if (typeof onUserLocationSelect === 'function') onUserLocationSelect(lat, lng);
           setSearchQuery("ตำแหน่งปัจจุบัน");
           setIsGettingLocation(false);
 
@@ -200,7 +205,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
 
           console.log("IP-based location:", { lat, lng, city: data.city });
 
-          setUserLocation([lat, lng]);
+          userLocationRef.current = [lat, lng];
           setPosition([lat, lng]);
           onLocationSelect(lat, lng);
           setSearchQuery(
@@ -416,7 +421,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
         (result) => result.place_id === placeId
       );
 
-      if (selectedResult && selectedResult.geometry) {
+  if (selectedResult && selectedResult.geometry) {
         const lat = selectedResult.geometry.location.lat;
         const lng = selectedResult.geometry.location.lng;
 
@@ -426,8 +431,9 @@ const MapSelector: React.FC<MapSelectorProps> = ({
           place: selectedResult.description,
         });
 
-        setPosition([lat, lng]);
-        onLocationSelect(lat, lng);
+  setPosition([lat, lng]);
+  onLocationSelect(lat, lng);
+  if (typeof onUserLocationSelect === 'function') onUserLocationSelect(lat, lng);
         setSearchQuery(selectedResult.description);
         setShowResults(false);
         toast.success("พบสถานที่แล้ว!");
@@ -557,8 +563,9 @@ const MapSelector: React.FC<MapSelectorProps> = ({
           place: result.formatted_address,
         });
 
-        setPosition([lat, lng]);
-        onLocationSelect(lat, lng);
+  setPosition([lat, lng]);
+  onLocationSelect(lat, lng);
+  if (typeof onUserLocationSelect === 'function') onUserLocationSelect(lat, lng);
         setSearchQuery(result.formatted_address);
         toast.success("พบสถานที่แล้ว!");
       } else if (data.status === "ZERO_RESULTS") {

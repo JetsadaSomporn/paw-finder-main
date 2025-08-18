@@ -33,8 +33,14 @@ const AuthCallback = () => {
             const needsUsername = !profileData || !profileData.username;
             const needsTerms = !profileData || !profileData.terms_accepted_at;
 
-            if (needsUsername || needsTerms) {
-              // redirect to social complete page
+            // Determine if the sign-in was via a social provider (non-email)
+            const identities = (user as any)?.identities as Array<any> | undefined;
+            const signedInWithSocial = Array.isArray(identities)
+              ? identities.some((id) => id.provider && id.provider !== 'email')
+              : false;
+
+            // Only redirect social provider sign-ins to the social-complete flow.
+            if (signedInWithSocial && (needsUsername || needsTerms)) {
               navigate('/social-complete');
               return;
             }

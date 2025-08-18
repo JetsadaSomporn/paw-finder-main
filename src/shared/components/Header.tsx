@@ -16,9 +16,20 @@ const Header: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error signing out:', error);
+      }
     } catch (error) {
       console.error('Error signing out:', error);
+    } finally {
+      // Force a full reload/redirect to clear any provider session state
+      // and ensure the UI reflects the logged-out state.
+      try {
+        window.location.assign('/');
+      } catch (e) {
+        window.location.reload();
+      }
     }
   };
 

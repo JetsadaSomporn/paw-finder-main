@@ -57,6 +57,26 @@ export const FoundPetsSearch: React.FC = () => {
   const [mapCenter, setMapCenter] =
     useState<[number, number]>(DEFAULT_MAP_CENTER);
 
+  // responsive items per page for the slider
+  const [itemsPerPage, setItemsPerPage] = useState<number>(() => {
+    if (typeof window === 'undefined') return 3;
+    const w = window.innerWidth;
+    if (w < 640) return 1; // mobile
+    if (w < 1024) return 2; // tablet
+    return 3; // desktop
+  });
+
+  useEffect(() => {
+    const onResize = () => {
+      const w = window.innerWidth;
+      if (w < 640) setItemsPerPage(1);
+      else if (w < 1024) setItemsPerPage(2);
+      else setItemsPerPage(3);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   const sortedPets = sortFoundPets(filteredPets);
 
   useSyncLocation({
@@ -149,7 +169,7 @@ export const FoundPetsSearch: React.FC = () => {
                 ไม่พบสัตว์ที่ตรงกับเงื่อนไข
               </div>
             ) : (
-              <Slider itemsPerPage={3}>
+              <Slider itemsPerPage={itemsPerPage}>
                 {sortedPets?.map((pet) => (
                   <div key={pet.id} className="px-2 py-4">
                     <FoundPetCard

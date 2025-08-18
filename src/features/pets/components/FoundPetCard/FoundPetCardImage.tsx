@@ -20,7 +20,7 @@ const FoundPetCardImage = ({ pet }: ImageSectionProps) => {
       <img
         src={imageUrl}
         alt={pet.breed}
-        className="w-full h-56 object-contain bg-[#F4A261]"
+        className="w-full h-44 md:h-56 object-contain bg-[#F4A261]"
         onError={handleImgError}
       />
       <div className="absolute top-3 right-3 bg-[#F4A261] text-white text-xs md:text-sm font-semibold px-3 py-1.5 rounded-full shadow">

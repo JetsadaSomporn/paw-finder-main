@@ -163,6 +163,7 @@ const SocialComplete: React.FC = () => {
                   type="checkbox"
                   checked={acceptTerms}
                   onChange={(e) => setAcceptTerms(e.target.checked)}
+                  required
                   className="mt-1 h-4 w-4 text-[#F4A261] focus:ring-[#F4A261] border-gray-300 rounded"
                 />
                 <label htmlFor="socialAccept" className="text-sm text-[#3E3E3E]">
@@ -185,13 +186,14 @@ const SocialComplete: React.FC = () => {
                 </label>
               </div>
 
-              {error && <div className="text-red-600 text-sm bg-red-50 p-3 rounded">{error}</div>}
+              {error && <div role="alert" aria-live="assertive" className="text-red-600 text-sm bg-red-50 p-3 rounded">{error}</div>}
 
               <div>
                 <button
                   onClick={handleSave}
-                  disabled={saving}
-                  className="w-full px-4 py-3 bg-[#F4A261] text-white rounded-lg hover:bg-[#6C4F3D]"
+                  disabled={saving || !acceptTerms}
+                  aria-disabled={!acceptTerms || saving}
+                  className={`w-full px-4 py-3 bg-[#F4A261] text-white rounded-lg hover:bg-[#6C4F3D] ${(!acceptTerms || saving) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {saving ? 'กำลังบันทึก...' : 'ยืนยันและเข้าสู่ระบบ'}
                 </button>

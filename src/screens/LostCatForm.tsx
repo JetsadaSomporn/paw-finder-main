@@ -92,6 +92,8 @@ const LostCatForm: React.FC = () => {
   } = watch();
 
   const { user } = useAuth();
+  const [markerPlaced, setMarkerPlaced] = React.useState<boolean>(false);
+  const [mapError, setMapError] = React.useState<string | null>(null);
   
   // show a small hint anchored under the header sign-in link and follow it while scrolling
   const showSignInHint = () => {
@@ -178,6 +180,16 @@ const LostCatForm: React.FC = () => {
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
     if (!user) {
       showSignInHint();
+      return;
+    }
+    // Validate that user has placed a marker on the map
+    if (!markerPlaced) {
+      setMapError('กรุณาปักหมุดตำแหน่งบนแผนที่ก่อนส่งข้อมูล');
+      // scroll map into view (if possible)
+  const mapContainer = document.querySelector('.rounded-xl.mt-2');
+      if (mapContainer && (mapContainer as HTMLElement).scrollIntoView) {
+        (mapContainer as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
     try {
@@ -519,8 +531,11 @@ const LostCatForm: React.FC = () => {
                       <MapPin className="h-4 w-4 text-[#F4A261]" />
                       ตำแหน่งที่หาย (คลิกที่แผนที่)
                     </Label>
-                    <div className="rounded-xl border border-[#F4A261]/30 mt-2 overflow-hidden">
-                      <MapSelector onLocationSelect={handleLocationSelect} />
+                    <div className={`rounded-xl mt-2 overflow-hidden ${mapError ? 'border-2 border-red-500' : 'border border-[#F4A261]/30'}`}>
+                      {mapError && (
+                        <div className="text-sm text-red-600 p-2">{mapError}</div>
+                      )}
+                      <MapSelector onLocationSelect={handleLocationSelect} onUserLocationSelect={(_lat,_lng)=>{ setMarkerPlaced(true); setMapError(null); }} />
                     </div>
                   </div>
                   <div>

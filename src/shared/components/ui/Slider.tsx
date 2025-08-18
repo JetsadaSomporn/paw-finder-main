@@ -45,7 +45,7 @@ export const Slider: React.FC<SliderProps> = ({
       <div className="overflow-hidden">
         <div
           className="flex transition-transform ease-out duration-300"
-          style={{ transform: `translateX(-${currentPage * 100}%)` }}
+          style={{ transform: `translateX(-${currentPage * 100}%)`, touchAction: 'pan-y' }}
         >
           {pages.map((page, pageIndex) => (
             <div
