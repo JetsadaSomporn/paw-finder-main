@@ -234,6 +234,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // mark when initial init() has completed so we can ignore transient auth events
   let initDone = false;
     async function init() {
+      // Early sanitization: detect invalid/expired JWT and wipe supabase/gotrue keys to avoid attaching stale tokens
+      try {
+        const { error: userError } = await supabase.auth.getUser();
+        if (userError && /invalid|expired|jwt/i.test(String(userError?.message || ''))) {
+          const wipe = (store: Storage) => {
+            for (let i = store.length - 1; i >= 0; i--) {
+              const k = store.key(i)!;
+              if (!k) continue;
+              const key = k.toLowerCase();
+              if (k.startsWith('sb-') || key.includes('supabase') || key.includes('gotrue')) {
+                try { store.removeItem(k); } catch {};
+              }
+            }
+          };
+          try { wipe(localStorage); wipe(sessionStorage); } catch {}
+          // reload so app starts without stale token
+          location.reload();
+          return;
+        }
+      } catch (e) {
+        // ignore errors in early sanitization
+      }
       let session;
       // Try to wire supabase-js session from localStorage token to reduce race on refresh
       try {
