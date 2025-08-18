@@ -11,12 +11,32 @@ interface Profile {
   avatar_url?: string;
 }
 
+type AuthErrorType =
+  | 'none'
+  | 'no_session'
+  | 'select_error'
+  | 'insert_error'
+  | 'rls_error'
+  | 'network_error'
+  | 'unknown';
+
+interface AuthErrorDetail {
+  type: AuthErrorType;
+  step: string;
+  message?: string;
+  code?: string | number | null;
+  status?: number | null;
+  requiresSignOut?: boolean;
+  timestamp: string;
+  extra?: any;
+}
+
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
   profileLoading: boolean;
-  profileError: { type: 'none' | 'select_error' | 'insert_error' | 'timeout' ; message?: string; code?: string | number | null; requiresSignOut?: boolean } | null;
+  profileError: AuthErrorDetail | null;
   needsTermsAcceptance: boolean;
   needsUsernameSetup: boolean;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
@@ -42,7 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
-  const [profileError, setProfileError] = useState<{ type: 'none' | 'select_error' | 'insert_error' | 'timeout' ; message?: string; code?: string | number | null; requiresSignOut?: boolean } | null>(null);
+  const [profileError, setProfileError] = useState<AuthErrorDetail | null>(null);
   const [needsTermsAcceptance, setNeedsTermsAcceptance] = useState(false);
   const [needsUsernameSetup, setNeedsUsernameSetup] = useState(false);
 
@@ -138,12 +158,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let cancelled = false;
     async function init() {
-      // Wait for session to be available (retry up to 3 times, 300ms apart)
       let session;
+      let errorDetail: AuthErrorDetail | null = null;
       for (let i = 0; i < 3; i++) {
-        const { data } = await supabase.auth.getSession();
-        session = data.session;
-        if (session?.user) break;
+        try {
+          const { data, error } = await supabase.auth.getSession();
+          if (error) {
+            errorDetail = {
+              type: 'network_error',
+              step: 'getSession',
+              message: error.message,
+              code: error.status,
+              status: error.status,
+              timestamp: new Date().toISOString(),
+            };
+            continue;
+          }
+          session = data.session;
+          if (session?.user) break;
+        } catch (e: any) {
+          errorDetail = {
+            type: 'unknown',
+            step: 'getSession',
+            message: e?.message || String(e),
+            timestamp: new Date().toISOString(),
+            extra: e,
+          };
+        }
         await new Promise(r => setTimeout(r, 300));
       }
       if (cancelled) return;
@@ -154,6 +195,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile(null);
         setNeedsTermsAcceptance(false);
         setNeedsUsernameSetup(false);
+        setProfileError({
+          type: 'no_session',
+          step: 'init',
+          message: 'No session/user after retries',
+          timestamp: new Date().toISOString(),
+          ...errorDetail
+        });
       }
       setLoading(false);
     }
@@ -171,6 +219,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile(null);
         setNeedsTermsAcceptance(false);
         setNeedsUsernameSetup(false);
+        setProfileError({
+          type: 'no_session',
+          step: 'onAuthStateChange',
+          message: 'No session/user in onAuthStateChange',
+          timestamp: new Date().toISOString(),
+        });
       }
       setLoading(false);
     });
@@ -180,94 +234,126 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleUserProfile = async (user: User) => {
     setProfileLoading(true);
     setProfileError(null);
-    // fetch existing profile
-    const { data: existingProfile, error: selectError, status } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (selectError) {
-      // If PGRST116 (no rows found) create a new profile immediately
-      const errCode = (selectError as any).code || (selectError as any).status || null;
-      const errMsg = selectError.message || String(selectError);
-      console.warn('[AuthContext] profiles SELECT error', { userId: user.id, code: errCode, message: errMsg, status });
-
-      if (String(errCode) === 'PGRST116' || /no rows found/i.test(errMsg)) {
-        // Try to create profile when select reports no rows
+    const step = 'handleUserProfile';
+    try {
+      // fetch existing profile
+      const { data: existingProfile, error: selectError, status } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (selectError) {
+        const errCode = (selectError as any).code || (selectError as any).status || null;
+        const errMsg = selectError.message || String(selectError);
+        const ts = new Date().toISOString();
+        console.warn('[AuthContext] SELECT error', { userId: user.id, code: errCode, message: errMsg, status, step });
+        if (String(errCode) === 'PGRST116' || /no rows found/i.test(errMsg)) {
+          // Try to create profile when select reports no rows
+          const newProfile = {
+            id: user.id,
+            full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || null,
+            avatar_url: (user.user_metadata as any)?.avatar_url || null,
+          };
+          const { data: createdProfile, error: insertError, status: insertStatus } = await supabase
+            .from('profiles')
+            .insert([newProfile])
+            .select()
+            .single();
+          if (insertError) {
+            console.error('[AuthContext] INSERT after PGRST116 failed', user.id, insertError, 'status:', insertStatus);
+            setProfile(null);
+            setNeedsTermsAcceptance(false);
+            setNeedsUsernameSetup(false);
+            setProfileError({
+              type: insertStatus === 403 ? 'rls_error' : 'insert_error',
+              step: 'insert-after-select-PGRST116',
+              message: insertError.message || String(insertError),
+              code: insertError.code || insertStatus || null,
+              status: insertStatus,
+              requiresSignOut: insertStatus === 403,
+              timestamp: ts,
+              extra: insertError,
+            });
+            setProfileLoading(false);
+            return;
+          }
+          setProfile(createdProfile || newProfile);
+          setNeedsTermsAcceptance(true);
+          setNeedsUsernameSetup(true);
+          setProfileLoading(false);
+          return;
+        }
+        // Other select errors — likely RLS or network. Set error flag so UI can show message or force sign out.
+        const requiresSignOut = status === 401 || status === 403;
+        setProfile(null);
+        setNeedsTermsAcceptance(false);
+        setNeedsUsernameSetup(false);
+        setProfileError({
+          type: status === 403 ? 'rls_error' : 'select_error',
+          step: 'select',
+          message: errMsg,
+          code: errCode,
+          status,
+          requiresSignOut,
+          timestamp: ts,
+          extra: selectError,
+        });
+        setProfileLoading(false);
+        return;
+      }
+      // No select error
+      if (!existingProfile) {
+        // ผู้ใช้ใหม่จาก Social Login - สร้าง profile
         const newProfile = {
           id: user.id,
           full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || null,
           avatar_url: (user.user_metadata as any)?.avatar_url || null,
         };
-
         const { data: createdProfile, error: insertError, status: insertStatus } = await supabase
           .from('profiles')
           .insert([newProfile])
           .select()
           .single();
-
         if (insertError) {
-          console.error('[AuthContext] profiles INSERT after PGRST116 failed', user.id, insertError, 'status:', insertStatus);
+          console.error('[AuthContext] INSERT error for user', user.id, insertError, 'status:', insertStatus);
           setProfile(null);
           setNeedsTermsAcceptance(false);
           setNeedsUsernameSetup(false);
-          setProfileError({ type: 'insert_error', message: insertError.message || String(insertError), code: insertError.code || insertStatus || null, requiresSignOut: insertStatus === 403 });
+          setProfileError({
+            type: insertStatus === 403 ? 'rls_error' : 'insert_error',
+            step: 'insert',
+            message: insertError.message || String(insertError),
+            code: insertError.code || insertStatus || null,
+            status: insertStatus,
+            requiresSignOut: insertStatus === 403,
+            timestamp: new Date().toISOString(),
+            extra: insertError,
+          });
           setProfileLoading(false);
           return;
         }
-
         setProfile(createdProfile || newProfile);
-        setNeedsTermsAcceptance(true);
-        setNeedsUsernameSetup(true);
+        setNeedsTermsAcceptance(true); // ผู้ใช้ใหม่ต้องยอมรับ Terms
+        setNeedsUsernameSetup(true); // ผู้ใช้ใหม่ต้องตั้ง Username
         setProfileLoading(false);
-        return;
+      } else {
+        setProfile(existingProfile);
+        setNeedsTermsAcceptance(!existingProfile.terms_accepted_at);
+        setNeedsUsernameSetup(!existingProfile.username);
+        setProfileLoading(false);
       }
-
-      // Other select errors — likely RLS or network. Set error flag so UI can show message or force sign out.
-      const requiresSignOut = status === 401 || status === 403;
+    } catch (e: any) {
+      const ts = new Date().toISOString();
       setProfile(null);
       setNeedsTermsAcceptance(false);
       setNeedsUsernameSetup(false);
-      setProfileError({ type: 'select_error', message: errMsg, code: errCode, requiresSignOut });
-      setProfileLoading(false);
-      // Do not auto sign out here; UI can act on profileError.requiresSignOut
-      return;
-    }
-
-    // No select error
-    if (!existingProfile) {
-      // ผู้ใช้ใหม่จาก Social Login - สร้าง profile
-      const newProfile = {
-        id: user.id,
-        full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || null,
-        avatar_url: (user.user_metadata as any)?.avatar_url || null,
-      };
-
-      const { data: createdProfile, error: insertError, status: insertStatus } = await supabase
-        .from('profiles')
-        .insert([newProfile])
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('[AuthContext] profiles INSERT error for user', user.id, insertError, 'status:', insertStatus);
-        setProfile(null);
-        setNeedsTermsAcceptance(false);
-        setNeedsUsernameSetup(false);
-        setProfileError({ type: 'insert_error', message: insertError.message || String(insertError), code: insertError.code || insertStatus || null, requiresSignOut: insertStatus === 403 });
-        setProfileLoading(false);
-        return;
-      }
-
-      setProfile(createdProfile || newProfile);
-      setNeedsTermsAcceptance(true); // ผู้ใช้ใหม่ต้องยอมรับ Terms
-      setNeedsUsernameSetup(true); // ผู้ใช้ใหม่ต้องตั้ง Username
-      setProfileLoading(false);
-    } else {
-      setProfile(existingProfile);
-      setNeedsTermsAcceptance(!existingProfile.terms_accepted_at);
-      setNeedsUsernameSetup(!existingProfile.username);
+      setProfileError({
+        type: 'unknown',
+        step,
+        message: e?.message || String(e),
+        timestamp: ts,
+        extra: e,
+      });
       setProfileLoading(false);
     }
   };
