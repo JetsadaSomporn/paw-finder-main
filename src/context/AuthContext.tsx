@@ -298,17 +298,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProfileLoading(true);
     setProfileError(null);
     const step = 'handleUserProfile';
+    const startTs = Date.now();
+    const devLog = (...args: any[]) => {
+      if (process.env.NODE_ENV === 'development') console.info('[AuthContext.timeline]', ...args);
+    };
+    devLog('start', { userId: user?.id });
+    // watchdog: if profile loading never completes within 10s, recover
+    let watchdog: NodeJS.Timeout | null = null;
+    const startWatchdog = () => {
+      if (process.env.NODE_ENV !== 'development') return;
+      watchdog = setTimeout(() => {
+        console.warn('[AuthContext.timeline] watchdog timeout clearing profileLoading after 10s', { userId: user?.id });
+        setProfileLoading(false);
+        setProfileError({ type: 'unknown', step: 'watchdog', message: 'profile load timed out', timestamp: new Date().toISOString() });
+      }, 10000);
+    };
+    const stopWatchdog = () => { if (watchdog) { clearTimeout(watchdog); watchdog = null; } };
+    startWatchdog();
     try {
       // Dev-only artificial delay to help visualize loading placeholder
       if (process.env.NODE_ENV === 'development') {
         await new Promise(r => setTimeout(r, 300));
       }
       // fetch existing profile by id only
+      devLog('supabase.select.start', { userId: user.id });
       const { data: existingProfile, error: selectError, status } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
+      devLog('supabase.select.done', { userId: user.id, existingProfile, selectError, status });
 
       if (selectError) {
         const errCode = (selectError as any).code || (selectError as any).status || null;
@@ -319,12 +338,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (looksLikeNoRows) {
           // Create minimal profile
             // Try REST fallback first
+            devLog('restFallback.start', { userId: user.id });
             const rest = await restFetchProfileByUserId(user.id);
+            devLog('restFallback.done', { userId: user.id, rest });
             if (rest) {
               setProfile(rest as any);
               setNeedsTermsAcceptance(!rest.terms_accepted_at);
               setNeedsUsernameSetup(!rest.username);
               setProfileLoading(false);
+              stopWatchdog();
+              devLog('done', { userId: user.id, duration: Date.now() - startTs });
               return;
             }
 
@@ -353,24 +376,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 extra: insertError,
               });
               setProfileLoading(false);
+              stopWatchdog();
+              devLog('done.error', { userId: user.id, reason: 'insert-after-select', duration: Date.now() - startTs });
               return;
             }
             setProfile(createdProfile || newProfile);
             setNeedsTermsAcceptance(true);
             setNeedsUsernameSetup(true);
             setProfileLoading(false);
+            stopWatchdog();
+            devLog('done', { userId: user.id, duration: Date.now() - startTs });
             return;
         }
 
         // Other select errors (network/RLS)
         const requiresSignOut = status === 401 || status === 403;
-        setProfile(null);
-        setNeedsTermsAcceptance(false);
-        setNeedsUsernameSetup(false);
+        // As a robust fallback, construct a client-side profile object so UI can continue.
+        const fallbackProfile: Profile = {
+          id: user.id,
+          username: user.email ? String(user.email).split('@')[0] : undefined,
+          full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || undefined,
+          avatar_url: (user.user_metadata as any)?.avatar_url || undefined,
+        };
+        setProfile(fallbackProfile);
+        // Mark that this is not a DB-backed profile
+        setNeedsTermsAcceptance(true);
+        setNeedsUsernameSetup(!fallbackProfile.username);
         setProfileError({
           type: status === 403 ? 'rls_error' : 'select_error',
           step: 'select',
-          message: errMsg,
+          message: errMsg + ' (using local fallback profile)',
           code: errCode,
           status,
           requiresSignOut,
@@ -378,6 +413,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           extra: selectError,
         });
         setProfileLoading(false);
+        stopWatchdog();
+        devLog('done.fallback', { userId: user.id, reason: 'select-error', duration: Date.now() - startTs });
         return;
       }
 
@@ -389,6 +426,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setNeedsTermsAcceptance(!rest.terms_accepted_at);
           setNeedsUsernameSetup(!rest.username);
           setProfileLoading(false);
+          stopWatchdog();
+          devLog('done', { userId: user.id, duration: Date.now() - startTs });
           return;
         }
 
@@ -404,45 +443,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .select()
           .single();
         if (insertError) {
-          setProfile(null);
-          setNeedsTermsAcceptance(false);
-          setNeedsUsernameSetup(false);
+          // If insert fails, fall back to a client-only profile so UI remains usable.
+          const fallbackProfile: Profile = {
+            id: user.id,
+            username: user.email ? String(user.email).split('@')[0] : undefined,
+            full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || undefined,
+            avatar_url: (user.user_metadata as any)?.avatar_url || undefined,
+          };
+          setProfile(fallbackProfile);
+          setNeedsTermsAcceptance(true);
+          setNeedsUsernameSetup(!fallbackProfile.username);
           setProfileError({
             type: insertStatus === 403 ? 'rls_error' : 'insert_error',
             step: 'insert',
-            message: insertError.message || String(insertError),
-            code: insertError.code || insertStatus || null,
+            message: (insertError && insertError.message ? insertError.message : String(insertError)) + ' (using local fallback profile)',
+            code: insertError?.code || insertStatus || null,
             status: insertStatus,
             requiresSignOut: insertStatus === 403,
             timestamp: new Date().toISOString(),
             extra: insertError,
           });
           setProfileLoading(false);
+          stopWatchdog();
+          devLog('done.fallback', { userId: user.id, reason: 'insert-error', duration: Date.now() - startTs });
           return;
         }
         setProfile(createdProfile || newProfile);
         setNeedsTermsAcceptance(true);
         setNeedsUsernameSetup(true);
         setProfileLoading(false);
+        stopWatchdog();
+        devLog('done', { userId: user.id, duration: Date.now() - startTs });
       } else {
         setProfile(existingProfile);
         setNeedsTermsAcceptance(!existingProfile.terms_accepted_at);
         setNeedsUsernameSetup(!existingProfile.username);
         setProfileLoading(false);
+        stopWatchdog();
+        devLog('done', { userId: user.id, duration: Date.now() - startTs });
       }
     } catch (e: any) {
       const ts = new Date().toISOString();
-      setProfile(null);
-      setNeedsTermsAcceptance(false);
-      setNeedsUsernameSetup(false);
+      // On unexpected errors, fall back to a local profile so the UI can proceed.
+      const fallbackProfile: Profile = {
+        id: user.id,
+        username: user.email ? String(user.email).split('@')[0] : undefined,
+        full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || undefined,
+        avatar_url: (user.user_metadata as any)?.avatar_url || undefined,
+      };
+      setProfile(fallbackProfile);
+      setNeedsTermsAcceptance(true);
+      setNeedsUsernameSetup(!fallbackProfile.username);
       setProfileError({
         type: 'unknown',
         step,
-        message: e?.message || String(e),
+        message: e?.message || String(e) + ' (using local fallback profile)',
         timestamp: ts,
         extra: e,
       });
       setProfileLoading(false);
+      stopWatchdog();
+      devLog('done.fallback', { userId: user.id, reason: 'catch', duration: Date.now() - startTs, error: (e as any)?.message || String(e) });
     }
   };
 
