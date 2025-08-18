@@ -45,13 +45,9 @@ const SignUp: React.FC = () => {
 
   // Social Login Functions
   const handleFacebookSignUp = async () => {
-    if (!acceptTerms) {
-      setError('กรุณายอมรับเงื่อนไขการใช้งานและนโยบายความเป็นส่วนตัวก่อน');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
+  // Allow social signups even if terms not yet accepted; the user can accept later in the flow
+  setLoading(true);
+  setError('');
     
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -70,13 +66,9 @@ const SignUp: React.FC = () => {
   };
 
   const handleGoogleSignUp = async () => {
-    if (!acceptTerms) {
-      setError('กรุณายอมรับเงื่อนไขการใช้งานและนโยบายความเป็นส่วนตัวก่อน');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
+  // Allow social signups even if terms not yet accepted; the user can accept later in the flow
+  setLoading(true);
+  setError('');
     
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -318,7 +310,9 @@ const SignUp: React.FC = () => {
               <button
                 type="button"
                 className="text-[#F4A261] hover:text-[#6C4F3D] underline font-medium"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
                   setModalContent('terms');
                   setShowTermsModal(true);
                 }}
@@ -329,7 +323,9 @@ const SignUp: React.FC = () => {
               <button
                 type="button"
                 className="text-[#F4A261] hover:text-[#6C4F3D] underline font-medium"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
                   setModalContent('privacy');
                   setShowTermsModal(true);
                 }}
@@ -373,13 +369,8 @@ const SignUp: React.FC = () => {
             <button
               type="button"
               onClick={handleFacebookSignUp}
-              disabled={loading || !acceptTerms}
-              className={`w-full flex items-center justify-center px-4 py-3 border rounded-lg text-white font-medium transition-colors duration-200 ${
-                acceptTerms 
-                  ? 'bg-[#1877F2] hover:bg-[#166FE5] border-[#1877F2] cursor-pointer' 
-                  : 'bg-gray-400 border-gray-400 cursor-not-allowed'
-              }`}
-              title={!acceptTerms ? 'กรุณายอมรับเงื่อนไขการใช้งานก่อน' : ''}
+              disabled={loading}
+              className="w-full flex items-center justify-center px-4 py-3 border rounded-lg text-white font-medium transition-colors duration-200 bg-[#1877F2] hover:bg-[#166FE5] border-[#1877F2] cursor-pointer"
             >
               <Facebook className="h-5 w-5 mr-2" />
               สมัครด้วย Facebook
@@ -388,13 +379,8 @@ const SignUp: React.FC = () => {
             <button
               type="button"
               onClick={handleGoogleSignUp}
-              disabled={loading || !acceptTerms}
-              className={`w-full flex items-center justify-center px-4 py-3 border rounded-lg font-medium transition-colors duration-200 ${
-                acceptTerms 
-                  ? 'bg-white hover:bg-gray-50 border-gray-300 text-gray-700 cursor-pointer' 
-                  : 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
-              }`}
-              title={!acceptTerms ? 'กรุณายอมรับเงื่อนไขการใช้งานก่อน' : ''}
+              disabled={loading}
+              className="w-full flex items-center justify-center px-4 py-3 border rounded-lg font-medium transition-colors duration-200 bg-white hover:bg-gray-50 border-gray-300 text-gray-700 cursor-pointer"
             >
               <FaGoogle className="h-5 w-5 mr-2" />
               สมัครด้วย Google
