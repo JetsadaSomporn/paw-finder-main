@@ -74,80 +74,11 @@ const FoundPetForm: React.FC = () => {
 
   const navigate = useNavigate();
   const { user } = useAuth();
-
-  const showSignInHint = () => {
-    if (document.getElementById('auth-hint')) return;
-    const signinEl = document.querySelector('a[href="/signin"]');
-    const container = document.createElement('div');
-    container.id = 'auth-hint';
-    container.style.position = 'fixed';
-  container.style.zIndex = '20000';
-    container.style.padding = '8px 12px';
-    container.style.background = 'white';
-    container.style.border = '1px solid rgba(0,0,0,0.08)';
-    container.style.borderRadius = '8px';
-    container.style.boxShadow = '0 6px 18px rgba(0,0,0,0.08)';
-    container.style.fontSize = '14px';
-    container.style.color = '#333';
-    container.style.width = 'auto';
-    container.style.visibility = 'hidden';
-    container.innerHTML = `
-      <div style="white-space:nowrap;padding:6px 12px">กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
-    `;
-    document.body.appendChild(container);
-
-    const updatePosition = () => {
-      const rect = signinEl ? signinEl.getBoundingClientRect() : null;
-      if (rect) {
-        container.style.width = 'auto';
-        container.style.visibility = 'hidden';
-        const measured = container.getBoundingClientRect();
-        const cw = measured.width || 200;
-        let left = rect.left + rect.width / 2 - cw / 2;
-        left = Math.max(8, Math.min(left, window.innerWidth - cw - 8));
-        container.style.left = `${left}px`;
-        container.style.top = `${rect.bottom + 8}px`;
-        container.style.visibility = 'visible';
-      } else {
-        container.style.width = 'auto';
-        container.style.right = '16px';
-        container.style.top = '72px';
-        container.style.visibility = 'visible';
-      }
-    };
-
-    updatePosition();
-    window.addEventListener('scroll', updatePosition, { passive: true });
-    window.addEventListener('resize', updatePosition);
-
-  const removeHint = () => {
-      try {
-        window.removeEventListener('scroll', updatePosition);
-        window.removeEventListener('resize', updatePosition);
-      } catch (e) {}
-      container.remove();
-    };
-
-    const autoRemove = setTimeout(() => {
-      removeHint();
-    }, 5000);
-
-    const observer = new MutationObserver(() => {
-      if (!document.body.contains(container)) {
-        clearTimeout(autoRemove);
-        try {
-          window.removeEventListener('scroll', updatePosition);
-          window.removeEventListener('resize', updatePosition);
-        } catch (e) {}
-        observer.disconnect();
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-  };
+  const { showSignInHint } = useAuth();
 
   const onSubmit: SubmitHandler<FoundPetFormInputs> = async (data) => {
     if (!user) {
-      showSignInHint();
+  showSignInHint();
       return;
     }
     try {

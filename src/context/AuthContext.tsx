@@ -17,6 +17,9 @@ interface AuthContextType {
   needsTermsAcceptance: boolean;
   needsUsernameSetup: boolean;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  // show a small sign-in hint anchored by Header when unauthenticated actions occur
+  signInHint: { visible: boolean; message: string };
+  showSignInHint: (message?: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -26,6 +29,8 @@ const AuthContext = createContext<AuthContextType>({
   needsTermsAcceptance: false,
   needsUsernameSetup: false,
   updateProfile: async () => {},
+  signInHint: { visible: false, message: '' },
+  showSignInHint: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -36,6 +41,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [needsTermsAcceptance, setNeedsTermsAcceptance] = useState(false);
   const [needsUsernameSetup, setNeedsUsernameSetup] = useState(false);
+  const [signInHint, setSignInHint] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
+  const hideTimer = React.useRef<number | null>(null);
+
+  const showSignInHint = (message = 'กรุณาเข้าสู่ระบบก่อนส่งข้อมูล') => {
+    // clear any existing timer
+    if (hideTimer.current) {
+      window.clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+    setSignInHint({ visible: true, message });
+    // auto-hide after 5 seconds
+    hideTimer.current = window.setTimeout(() => {
+      setSignInHint({ visible: false, message: '' });
+      hideTimer.current = null;
+    }, 5000);
+  };
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return;
@@ -133,7 +154,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         needsTermsAcceptance,
         needsUsernameSetup,
-        updateProfile
+  updateProfile,
+  signInHint,
+  showSignInHint,
       }}
     >
       {children}
