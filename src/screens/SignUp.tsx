@@ -201,6 +201,24 @@ const SignUp: React.FC = () => {
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+           <div>
+              <label htmlFor="username" className="block text-sm font-medium text-[#6C4F3D]">
+                ชื่อผู้ใช้ (Username)
+              </label>
+              <div className="mt-1 relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#F4A261] h-5 w-5" />
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="appearance-none relative block w-full px-10 py-3 border border-[#F4A261] placeholder-[#3E3E3E] text-[#2B2B2B] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F4A261] focus:border-[#F4A261] focus:z-10 sm:text-sm bg-white"
+                  placeholder="ชื่อผู้ใช้"
+                />
+              </div>
+            </div>
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-[#6C4F3D]">
@@ -221,27 +239,7 @@ const SignUp: React.FC = () => {
                 />
               </div>
             </div>
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-[#6C4F3D]">
-                ชื่อผู้ใช้ (Username)
-              </label>
-              <div className="mt-1 relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#F4A261] h-5 w-5" />
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="appearance-none relative block w-full px-10 py-3 border border-[#F4A261] placeholder-[#3E3E3E] text-[#2B2B2B] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F4A261] focus:border-[#F4A261] focus:z-10 sm:text-sm bg-white"
-                  placeholder="ชื่อผู้ใช้ 3-30 ตัวอักษร (a-z, 0-9, _)"
-                />
-              </div>
-              <p className="mt-1 text-xs text-gray-500">
-                ใช้ได้เฉพาะตัวอักษร ตัวเลข และ _ เท่านั้น
-              </p>
-            </div>
+           
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-[#6C4F3D]">
                 รหัสผ่าน
