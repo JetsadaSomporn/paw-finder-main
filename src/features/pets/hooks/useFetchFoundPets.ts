@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import toast from "react-hot-toast";
 import { FoundPet } from "../types";
@@ -16,52 +16,60 @@ interface UseFetchFoundPetsReturn {
   refetch: () => Promise<void>;
 }
 
-export const useFetchFoundPets = (requireAuth = false): UseFetchFoundPetsReturn => {
+export const useFetchFoundPets = (requireAuth = false, waitForUserMs = 8000): UseFetchFoundPetsReturn => {
   const [foundPets, setFoundPets] = useState<FoundPet[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  const waitTimer = useRef<number | null>(null);
+
+  const withTimeout = async <T,>(p: Promise<T>, ms = 8000): Promise<T> => {
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('timeout')), ms) as unknown as number;
+      p.then((v) => {
+        clearTimeout(t);
+        resolve(v);
+      }).catch((e) => {
+        clearTimeout(t);
+        reject(e);
+      });
+    });
+  };
 
   const fetchFoundPets = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch found pets data
-      const { data: pets, error: petsError } = await supabase
-        .from("found_pets")
-        .select("*")
-        .eq("status", "active")
-        .order("created_at", { ascending: false });
+      // Fetch found pets data (timeboxed)
+      const petsRes: any = await withTimeout(
+        (supabase.from("found_pets").select("*").eq("status", "active").order("created_at", { ascending: false }) as any),
+        10000
+      );
+      const { data: pets, error: petsError } = petsRes as any;
 
       if (petsError) {
         throw petsError;
       }
 
-      // Fetch images for each found pet
+      // Fetch images for each found pet (each timeboxed to avoid one slow row blocking the whole list)
       const petsWithImages = await Promise.all(
-        pets.map(async (pet) => {
-          const { data: images, error: imagesError } = await supabase
-            .from("found_pet_images")
-            .select("*")
-            .eq("found_pet_id", pet.id);
-
-          if (imagesError) {
-            console.warn(
-              `Error fetching images for found pet ${pet.id}:`,
-              imagesError
+        pets.map(async (pet: any) => {
+          try {
+            const imagesRes: any = await withTimeout(
+              (supabase.from("found_pet_images").select("*").eq("found_pet_id", pet.id) as any),
+              8000
             );
-            // Don't throw error for images, just continue without them
-            return {
-              ...pet,
-              images: [],
-            };
+            const { data: images, error: imagesError } = imagesRes as any;
+            if (imagesError) {
+              console.warn(`Error fetching images for found pet ${pet.id}:`, imagesError);
+              return { ...pet, images: [] };
+            }
+            return { ...pet, images: images || [] };
+          } catch (e) {
+            console.warn(`Timeout/error fetching images for found pet ${pet.id}:`, e);
+            return { ...pet, images: [] };
           }
-
-          return {
-            ...pet,
-            images: images || [],
-          };
         })
       );
 
@@ -82,18 +90,45 @@ export const useFetchFoundPets = (requireAuth = false): UseFetchFoundPetsReturn 
   };
 
   useEffect(() => {
-    // If this hook is configured to require an authenticated user, wait until
-    // `user` is available before running the fetch. When `user` changes the
-    // effect will re-run and fetch again.
-    if (requireAuth && !user?.id) {
-      // Keep the loading state true until we can fetch; clear previous data.
+    let cancelled = false;
+    const startWaiting = () => {
+      if (waitTimer.current) {
+        window.clearTimeout(waitTimer.current);
+        waitTimer.current = null;
+      }
+      waitTimer.current = window.setTimeout(() => {
+        waitTimer.current = null;
+        if (!cancelled) {
+          // fallback to public fetch if user didn't arrive in time
+          fetchFoundPets().catch(() => {});
+        }
+      }, waitForUserMs) as unknown as number;
       setFoundPets([]);
       setLoading(true);
-      return;
+    };
+
+    if (requireAuth) {
+      if (!user?.id) {
+        startWaiting();
+      } else {
+        if (waitTimer.current) {
+          window.clearTimeout(waitTimer.current);
+          waitTimer.current = null;
+        }
+        fetchFoundPets().catch(() => {});
+      }
+    } else {
+      fetchFoundPets().catch(() => {});
     }
 
-    fetchFoundPets();
-  }, [requireAuth, user?.id]);
+    return () => {
+      cancelled = true;
+      if (waitTimer.current) {
+        window.clearTimeout(waitTimer.current);
+        waitTimer.current = null;
+      }
+    };
+  }, [requireAuth, user?.id, waitForUserMs]);
 
   return {
     foundPets,
