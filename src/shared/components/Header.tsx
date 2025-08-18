@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Link, useLocation as useRouterLocation } from 'react-router-dom';
-import toast from 'react-hot-toast';
 
 const Header: React.FC = () => {
-  const { user, profile, signInHint } = useAuth();
+  const { user, profile } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const routerLocation = useRouterLocation();
   const currentState = (routerLocation.state as any) || undefined;
@@ -17,46 +16,11 @@ const Header: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
-  await supabase.auth.signOut();
-  // Force reload/redirect so OAuth sessions (Google) reflect sign-out immediately
-  toast.success('ออกจากระบบเรียบร้อย');
-  // use hard reload to clear any cached auth state
-  window.location.assign('/');
+      await supabase.auth.signOut();
     } catch (error) {
       console.error('Error signing out:', error);
     }
   };
-
-  const signInRef = useRef<HTMLAnchorElement | null>(null);
-  const hintRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    // reposition hint when visible
-    const update = () => {
-      const hint = hintRef.current;
-      const anchor = signInRef.current || document.querySelector('a[href="/signin"]');
-      if (!hint) return;
-      if (anchor) {
-        const rect = (anchor as HTMLElement).getBoundingClientRect();
-        hint.style.left = `${Math.max(8, Math.min(rect.left + rect.width / 2 - hint.getBoundingClientRect().width / 2, window.innerWidth - hint.getBoundingClientRect().width - 8))}px`;
-        hint.style.top = `${rect.bottom + 8}px`;
-      } else {
-        hint.style.right = '16px';
-        hint.style.top = '72px';
-      }
-    };
-
-    if (signInHint.visible) {
-      update();
-      window.addEventListener('scroll', update, { passive: true });
-      window.addEventListener('resize', update);
-    }
-
-    return () => {
-      window.removeEventListener('scroll', update);
-      window.removeEventListener('resize', update);
-    };
-  }, [signInHint.visible, signInHint.message]);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -134,7 +98,6 @@ const Header: React.FC = () => {
                 <Link
                   to="/signin"
                   state={currentState}
-                  ref={signInRef}
                   className="text-gray-700 hover:text-[#F4A261] px-3 py-2 text-sm font-medium"
                 >
                   เข้าสู่ระบบ
@@ -151,8 +114,11 @@ const Header: React.FC = () => {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
-            <button onClick={toggleMenu} className="p-2 rounded-md text-gray-700 hover:text-[#F4A261]">
+          <div className="md:hidden">
+            <button
+              onClick={toggleMenu}
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-[#F4A261] hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#F4A261]"
+            >
               {isMenuOpen ? (
                 <X className="block h-6 w-6" />
               ) : (
@@ -162,28 +128,6 @@ const Header: React.FC = () => {
           </div>
         </div>
       </div>
-
-            {/* Sign-in hint rendered by Header when requested via AuthContext */}
-            {signInHint.visible && (
-              <div
-                ref={hintRef}
-                id="auth-hint"
-                style={{
-                  position: 'fixed',
-                  zIndex: 20000,
-                  padding: '8px 12px',
-                  background: 'white',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  borderRadius: '8px',
-                  boxShadow: '0 6px 18px rgba(0,0,0,0.08)',
-                  fontSize: '14px',
-                  color: '#333',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <div style={{ padding: '6px 12px' }}>{signInHint.message}</div>
-              </div>
-            )}
 
       {/* Mobile menu */}
       {isMenuOpen && (
