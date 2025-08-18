@@ -1,6 +1,5 @@
 import { Info, MapPin, Upload } from 'lucide-react';
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Controller, SubmitHandler, useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -92,7 +91,6 @@ const LostCatForm: React.FC = () => {
     hasCollar,
   } = watch();
 
-  const navigate = useNavigate();
   const { user } = useAuth();
   
   // show a small hint anchored under the header sign-in link and follow it while scrolling
@@ -111,32 +109,36 @@ const LostCatForm: React.FC = () => {
     container.style.boxShadow = '0 6px 18px rgba(0,0,0,0.08)';
     container.style.fontSize = '14px';
     container.style.color = '#333';
-    container.style.width = '260px';
+    // auto-size message-only hint (no action button)
+    container.style.width = 'auto';
+    container.style.visibility = 'hidden';
     container.innerHTML = `
-      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;white-space:nowrap">
-        <div style="flex:1">กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
-        <button id="auth-hint-btn" style="background:#F4A261;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;margin-left:8px">เข้าสู่ระบบ</button>
-      </div>
+      <div style="white-space:nowrap;padding:6px 12px">กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
     `;
 
     document.body.appendChild(container);
 
-  const hintWidth = 260;
-  const hintShiftRight = 16; // small horizontal offset to nudge the hint to the right
+    const hintShiftRight = 16; // small horizontal offset to nudge the hint to the right
 
     const updatePosition = () => {
       const rect = signinEl ? signinEl.getBoundingClientRect() : null;
       if (rect) {
-        // center the hint under the sign-in element, then nudge right
-        let left = rect.left + rect.width / 2 - hintWidth / 2 + hintShiftRight;
-        left = Math.max(8, Math.min(left, window.innerWidth - hintWidth - 8));
-        const top = rect.bottom + 8; // distance from the bottom of the sign-in element
+        // ensure natural width is measured while hidden, then show
+        container.style.width = 'auto';
+        container.style.visibility = 'hidden';
+        const measured = container.getBoundingClientRect();
+        const cw = measured.width || 200;
+        let left = rect.left + rect.width / 2 - cw / 2 + hintShiftRight;
+        left = Math.max(8, Math.min(left, window.innerWidth - cw - 8));
+        const top = rect.bottom + 8;
         container.style.left = `${left}px`;
         container.style.top = `${top}px`;
+        container.style.visibility = 'visible';
       } else {
         // fallback to top-right
         container.style.right = '16px';
         container.style.top = '72px';
+        container.style.visibility = 'visible';
       }
     };
 
@@ -144,8 +146,7 @@ const LostCatForm: React.FC = () => {
     window.addEventListener('scroll', updatePosition, { passive: true });
     window.addEventListener('resize', updatePosition);
 
-    const btn = container.querySelector('#auth-hint-btn') as HTMLButtonElement | null;
-    const removeHint = () => {
+  const removeHint = () => {
       try {
         window.removeEventListener('scroll', updatePosition);
         window.removeEventListener('resize', updatePosition);
@@ -154,11 +155,6 @@ const LostCatForm: React.FC = () => {
       }
       container.remove();
     };
-
-    btn?.addEventListener('click', () => {
-      removeHint();
-      navigate('/signin');
-    });
 
     // auto remove after 5 seconds
     const autoRemove = setTimeout(() => {

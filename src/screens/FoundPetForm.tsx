@@ -72,7 +72,6 @@ const FoundPetForm: React.FC = () => {
     hasCollar,
   } = watch();
 
-  const navigate = useNavigate();
   const { user } = useAuth();
 
   const showSignInHint = () => {
@@ -89,27 +88,30 @@ const FoundPetForm: React.FC = () => {
     container.style.boxShadow = '0 6px 18px rgba(0,0,0,0.08)';
     container.style.fontSize = '14px';
     container.style.color = '#333';
-    container.style.width = '260px';
+    container.style.width = 'auto';
+    container.style.visibility = 'hidden';
     container.innerHTML = `
-      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;white-space:nowrap">
-        <div style="flex:1">กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
-        <button id="auth-hint-btn" style="background:#F4A261;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;margin-left:8px">เข้าสู่ระบบ</button>
-      </div>
+      <div style="white-space:nowrap;padding:6px 12px">กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
     `;
     document.body.appendChild(container);
 
-    const hintWidth = 260;
-  const hintShiftRight = 16; // small horizontal offset to nudge the hint to the right
+    const hintShiftRight = 16; // small horizontal offset to nudge the hint to the right
     const updatePosition = () => {
       const rect = signinEl ? signinEl.getBoundingClientRect() : null;
       if (rect) {
-    let left = rect.left + rect.width / 2 - hintWidth / 2 + hintShiftRight;
-        left = Math.max(8, Math.min(left, window.innerWidth - hintWidth - 8));
+        container.style.width = 'auto';
+        container.style.visibility = 'hidden';
+        const measured = container.getBoundingClientRect();
+        const cw = measured.width || 200;
+        let left = rect.left + rect.width / 2 - cw / 2 + hintShiftRight;
+        left = Math.max(8, Math.min(left, window.innerWidth - cw - 8));
         container.style.left = `${left}px`;
         container.style.top = `${rect.bottom + 8}px`;
+        container.style.visibility = 'visible';
       } else {
         container.style.right = '16px';
         container.style.top = '72px';
+        container.style.visibility = 'visible';
       }
     };
 
@@ -117,19 +119,13 @@ const FoundPetForm: React.FC = () => {
     window.addEventListener('scroll', updatePosition, { passive: true });
     window.addEventListener('resize', updatePosition);
 
-    const btn = container.querySelector('#auth-hint-btn') as HTMLButtonElement | null;
-    const removeHint = () => {
+  const removeHint = () => {
       try {
         window.removeEventListener('scroll', updatePosition);
         window.removeEventListener('resize', updatePosition);
       } catch (e) {}
       container.remove();
     };
-
-    btn?.addEventListener('click', () => {
-      removeHint();
-      navigate('/signin');
-    });
 
     const autoRemove = setTimeout(() => {
       removeHint();
