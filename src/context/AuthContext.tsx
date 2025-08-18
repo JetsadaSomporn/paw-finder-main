@@ -155,6 +155,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Helper: try REST fallback to read profile using stored access_token
+  const restFetchProfileByUserId = async (userId?: string) => {
+    try {
+      if (!userId) return null;
+      const supaUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+      const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+      if (!supaUrl || !anon) return null;
+
+      // derive storage key: sb-<ref>-auth-token
+      let token: string | null = null;
+      try {
+        const ref = new URL(supaUrl).host.split('.')[0];
+        const storageKey = `sb-${ref}-auth-token`;
+        const raw = localStorage.getItem(storageKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          token = parsed?.access_token || parsed?.currentSession?.access_token || null;
+        }
+      } catch (e) {
+        // ignore parsing errors
+      }
+      if (!token) return null;
+
+      const url = `${supaUrl}/rest/v1/profiles?id=eq.${userId}&select=*`;
+      const resp = await fetch(url, {
+        headers: {
+          Authorization: 'Bearer ' + token,
+          apikey: anon,
+          Accept: 'application/json',
+        },
+      });
+      if (!resp.ok) return null;
+      const text = await resp.text();
+      try {
+        const data = JSON.parse(text);
+        if (Array.isArray(data) && data.length) return data[0];
+      } catch (e) {
+        return null;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
     async function init() {
@@ -252,6 +297,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (looksLikeNoRows) {
           // Create minimal profile
+            // Try REST fallback first
+            const rest = await restFetchProfileByUserId(user.id);
+            if (rest) {
+              setProfile(rest as any);
+              setNeedsTermsAcceptance(!rest.terms_accepted_at);
+              setNeedsUsernameSetup(!rest.username);
+              setProfileLoading(false);
+              return;
+            }
+
             const newProfile = {
               id: user.id,
               full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || null,
@@ -306,6 +361,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (!existingProfile) {
+        // No profile by id — try REST fallback before creating
+        const rest = await restFetchProfileByUserId(user.id);
+        if (rest) {
+          setProfile(rest as any);
+          setNeedsTermsAcceptance(!rest.terms_accepted_at);
+          setNeedsUsernameSetup(!rest.username);
+          setProfileLoading(false);
+          return;
+        }
+
         // Unexpected: no select error but also no data (treat as create path)
         const newProfile = {
           id: user.id,
