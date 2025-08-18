@@ -2,9 +2,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
-// Allow enabling auth debug logs in production (e.g. Vercel) by setting VITE_ENABLE_AUTH_DEBUG=true
-const DEBUG = Boolean(import.meta.env.DEV) || String(import.meta.env.VITE_ENABLE_AUTH_DEBUG) === 'true';
-
 interface Profile {
   id?: string;
   username?: string;
@@ -135,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // ignore per-key errors
           }
         }
-  if (DEBUG) console.info('[AuthContext] removed storage keys during signOut', removed);
+        if (process.env.NODE_ENV === 'development') console.info('[AuthContext] removed storage keys during signOut', removed);
       } catch (e) {
         /* ignore */
       }
@@ -183,7 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try { return JSON.parse(v); } catch { return v; }
       };
 
-  let token: string | null = null;
+      let token: string | null = null;
       const scanStore = (store: Storage) => {
         for (let i = store.length - 1; i >= 0; i--) {
           const key = store.key(i);
@@ -206,10 +203,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         return null;
       };
+
       token = scanStore(localStorage) || scanStore(sessionStorage) || null;
-      if (DEBUG) {
-        try { console.info('[AuthContext.restFetch] tokenFound', !!token); } catch (e) {}
-      }
       if (!token) return null;
 
       const url = `${supaUrl}/rest/v1/profiles?id=eq.${userId}&select=*`;
@@ -235,7 +230,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    let cancelled = false;
+  let cancelled = false;
+  // mark when initial init() has completed so we can ignore transient auth events
+  let initDone = false;
     async function init() {
       let session;
       // Try to wire supabase-js session from localStorage token to reduce race on refresh
@@ -338,12 +335,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } finally {
         setLoading(false);
         setProfileLoading(false);
+        // signal that initial wiring finished (success or failure)
+        initDone = true;
       }
     }
 
     // run init and guard against unhandled rejections so React doesn't get into a broken state
     init().catch((e) => {
-      if (DEBUG) console.error('[AuthContext] init error', e);
+      if (process.env.NODE_ENV === 'development') console.error('[AuthContext] init error', e);
       setUser(null);
       setProfile(null);
       setNeedsTermsAcceptance(false);
@@ -354,8 +353,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     // Listen for changes on auth state (sign in, sign out, etc.)
-    const authListener = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const authListener = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
+        // Only clear profile on explicit sign-out-like events to avoid transient clears
+        if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+          setUser(null);
+          setProfile(null);
+          setNeedsTermsAcceptance(false);
+          setNeedsUsernameSetup(false);
+          setProfileError({
+            type: 'no_session',
+            step: 'onAuthStateChange',
+            message: `No session/user in onAuthStateChange (${event})`,
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+
+        // Ignore transient null sessions fired before init completes
+        if (!initDone && !session) {
+          if (process.env.NODE_ENV === 'development') console.info('[AuthContext] ignoring transient onAuthStateChange null before init');
+          return;
+        }
+
         setUser(session?.user ?? null);
         if (session?.user) {
           await handleUserProfile(session.user);
@@ -371,7 +391,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
         }
       } catch (e) {
-  if (DEBUG) console.error('[AuthContext] onAuthStateChange handler error', e);
+        if (process.env.NODE_ENV === 'development') console.error('[AuthContext] onAuthStateChange handler error', e);
         setProfile(null);
         setNeedsTermsAcceptance(false);
         setNeedsUsernameSetup(false);
@@ -386,19 +406,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const subscription = (authListener && (authListener as any).data && (authListener as any).data.subscription) || (authListener as any).subscription || null;
     return () => { cancelled = true; try { subscription?.unsubscribe?.(); } catch (e) { /* ignore */ } };
   }, []);
-
-  // If an auth-related error requires sign-in, redirect user to sign-in to recover the app UI
-  useEffect(() => {
-    if (profileError?.requiresSignOut) {
-      try {
-        console.warn('[AuthContext] profileError requires sign out, redirecting to /signin', profileError);
-      } catch (e) {}
-      // give a small delay so UI can show message if needed
-      setTimeout(() => {
-        try { window.location.assign('/signin'); } catch (e) { window.location.reload(); }
-      }, 1200);
-    }
-  }, [profileError]);
 
   const handleUserProfile = async (user: User) => {
     // If we've already prefetched a profile for this user, skip re-loading.
@@ -420,7 +427,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // watchdog: if profile loading never completes within 10s, recover
     let watchdog: NodeJS.Timeout | null = null;
     const startWatchdog = () => {
-  if (!DEBUG) return;
+      if (process.env.NODE_ENV !== 'development') return;
       watchdog = setTimeout(() => {
         console.warn('[AuthContext.timeline] watchdog timeout clearing profileLoading after 10s', { userId: user?.id });
         setProfileLoading(false);
@@ -431,7 +438,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     startWatchdog();
     try {
       // Dev-only artificial delay to help visualize loading placeholder
-      if (DEBUG) {
+      if (process.env.NODE_ENV === 'development') {
         await new Promise(r => setTimeout(r, 300));
       }
       // fetch existing profile by id only
