@@ -1,6 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Info, MapPin, Upload } from 'lucide-react';
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { provinces } from '../data/provinces';
@@ -70,7 +72,27 @@ const FoundPetForm: React.FC = () => {
     hasCollar,
   } = watch();
 
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
   const onSubmit: SubmitHandler<FoundPetFormInputs> = async (data) => {
+    if (!user) {
+      toast((t: any) => (
+        <div className="flex items-center gap-4">
+          <div>กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
+          <button
+            onClick={() => {
+              toast.dismiss(t.id);
+              navigate('/signin');
+            }}
+            className="px-3 py-1 bg-[#F4A261] text-white rounded"
+          >
+            เข้าสู่ระบบ
+          </button>
+        </div>
+      ), { position: 'top-right' });
+      return;
+    }
     try {
       setValue('images', []); // clear images in form
       // Prepare the data for submission
