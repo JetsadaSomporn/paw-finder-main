@@ -88,70 +88,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    // Immediately clear local auth state and storage so UI updates instantly
+    try {
+      setUser(null);
+      setProfile(null);
+      setNeedsTermsAcceptance(false);
+      setNeedsUsernameSetup(false);
+
+      // Remove likely supabase keys from storage to avoid stale sessions
+      try {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (!key) continue;
+          const k = key.toLowerCase();
+          if (k.includes('supabase') || k.startsWith('sb:') || k.startsWith('sb-') || k.includes('auth')) {
+            localStorage.removeItem(key);
+          }
+        }
+      } catch (e) {
+        /* ignore */
+      }
+      try {
+        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+          const key = sessionStorage.key(i);
+          if (!key) continue;
+          const k = key.toLowerCase();
+          if (k.includes('supabase') || k.startsWith('sb:') || k.startsWith('sb-') || k.includes('auth')) {
+            sessionStorage.removeItem(key);
+          }
+        }
+      } catch (e) {
+        /* ignore */
+      }
+    } catch (e) {
+      // best-effort clear
+    }
+
+    // Attempt server-side signOut but don't block UI on it
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('Error signing out from AuthContext:', error);
-        // continue to clear local state
+        // non-fatal, UI already cleared
+        // keep profileError for visibility if needed
+        setProfileError({
+          type: 'unknown',
+          step: 'signOut',
+          message: error.message || String(error),
+          timestamp: new Date().toISOString(),
+          extra: error,
+        });
       }
-
-      // wait for auth state to clear (timeout after 3s)
-      await new Promise<void>((resolve) => {
-        const timeout = setTimeout(() => {
-          resolve();
-        }, 3000);
-
-        try {
-          const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            if (!session?.user) {
-              clearTimeout(timeout);
-              subscription.unsubscribe();
-              resolve();
-            }
-          });
-        } catch (e) {
-          clearTimeout(timeout);
-          resolve();
-        }
-      });
     } catch (e) {
-      console.error('Unexpected error during signOut in AuthContext:', e);
-    } finally {
-      // clear local auth state
-      try {
-        setUser(null);
-        setProfile(null);
-        setNeedsTermsAcceptance(false);
-        setNeedsUsernameSetup(false);
-
-        // Remove likely supabase keys from storage to avoid stale sessions
-        try {
-          for (let i = localStorage.length - 1; i >= 0; i--) {
-            const key = localStorage.key(i);
-            if (!key) continue;
-            const k = key.toLowerCase();
-            if (k.includes('supabase') || k.startsWith('sb:') || k.startsWith('sb-') || k.includes('auth')) {
-              localStorage.removeItem(key);
-            }
-          }
-        } catch (e) {
-          /* ignore */
-        }
-        try {
-          for (let i = sessionStorage.length - 1; i >= 0; i--) {
-            const key = sessionStorage.key(i);
-            if (!key) continue;
-            const k = key.toLowerCase();
-            if (k.includes('supabase') || k.startsWith('sb:') || k.startsWith('sb-') || k.includes('auth')) {
-              sessionStorage.removeItem(key);
-            }
-          }
-        } catch (e) {
-          /* ignore */
-        }
-      } catch (e) {
-        console.warn('Error clearing local auth state during signOut', e);
-      }
+      // ignore network signOut failures; UI already cleared
+      setProfileError({
+        type: 'network_error',
+        step: 'signOut',
+        message: (e as any)?.message || String(e),
+        timestamp: new Date().toISOString(),
+        extra: e,
+      });
     }
   };
 
@@ -204,6 +199,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let cancelled = false;
     async function init() {
       let session;
+      // Try to wire supabase-js session from localStorage token to reduce race on refresh
+      try {
+        const supaUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+        if (supaUrl) {
+          const ref = new URL(supaUrl).host.split('.')[0];
+          const storageKey = `sb-${ref}-auth-token`;
+          const raw = localStorage.getItem(storageKey);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              const access_token = parsed?.access_token || parsed?.currentSession?.access_token || null;
+              const refresh_token = parsed?.refresh_token || parsed?.currentSession?.refresh_token || null;
+              if (access_token) {
+                // setSession is idempotent and will attach token to client for subsequent calls
+                // ignore result; we proceed to getSession() below
+                // @ts-ignore - supabase.auth.setSession exists in v2
+                await supabase.auth.setSession({ access_token, refresh_token });
+              }
+            } catch (e) {
+              // ignore parsing errors
+            }
+          }
+        }
+      } catch (e) {
+        // ignore any early wiring errors
+      }
       let errorDetail: AuthErrorDetail | null = null;
       for (let i = 0; i < 3; i++) {
         try {
