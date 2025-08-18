@@ -38,24 +38,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [needsTermsAcceptance, setNeedsTermsAcceptance] = useState(false);
   const [needsUsernameSetup, setNeedsUsernameSetup] = useState(false);
-  // Debugging visible overlay (enable by setting localStorage.debugAuth = '1')
-  const [debugMode, setDebugMode] = useState<boolean>(() => {
-    try {
-      return typeof window !== 'undefined' && !!localStorage.getItem('debugAuth');
-    } catch (e) {
-      return false;
-    }
-  });
-  const [debugLog, setDebugLog] = useState<string>('');
-
-  const appendDebug = (msg: string) => {
-    try {
-      const ts = new Date().toISOString();
-      setDebugLog(prev => `${ts} ${msg}\n${prev}`);
-    } catch (e) {
-      // ignore
-    }
-  };
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return;
@@ -107,7 +89,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } catch (e) {
       console.error('Unexpected error during signOut in AuthContext:', e);
-  if (debugMode) appendDebug(`signOut unexpected error: ${String(e)}`);
     } finally {
       // clear local auth state
       try {
@@ -143,7 +124,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (e) {
         console.warn('Error clearing local auth state during signOut', e);
-  if (debugMode) appendDebug(`signOut clear state error: ${String(e)}`);
       }
     }
   };
@@ -154,7 +134,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (process.env.NODE_ENV === 'development') {
         console.debug('AuthContext.getSession result on init:', session?.user?.id ?? null, session);
       }
-      if (debugMode) appendDebug(`getSession init user:${session?.user?.id ?? 'null'}`);
       setUser(session?.user ?? null);
 
       // ดึง profile เฉพาะเมื่อมี user
@@ -174,7 +153,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (process.env.NODE_ENV === 'development') {
         console.debug('AuthContext.onAuthStateChange event:', event, 'user:', session?.user?.id ?? null);
       }
-      if (debugMode) appendDebug(`onAuthStateChange ${event} user:${session?.user?.id ?? 'null'}`);
       setUser(session?.user ?? null);
 
       if (session?.user) {
@@ -200,11 +178,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .single();
 
     if (selectError) {
-      // Log error for debugging (dev only)
+      // If SELECT fails (often RLS/policy), don't block the entire UI.
+      // Log error for later diagnosis but create a minimal fallback profile
       console.error('profiles SELECT error for user', user.id, selectError);
-      if (debugMode) appendDebug(`profiles SELECT error for user ${user.id}: ${JSON.stringify(selectError)}`);
-      // ensure profile is null to fallback to email, but surface issue in console/overlay
-      setProfile(null);
+
+      const fallbackProfile = {
+        full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || null,
+        avatar_url: (user.user_metadata as any)?.avatar_url || null,
+      };
+
+      // Use fallback so header and sign-out remain functional. Do not force username/terms flows here
+      setProfile(fallbackProfile as any);
       setNeedsTermsAcceptance(false);
       setNeedsUsernameSetup(false);
       return;
@@ -225,9 +209,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (insertError) {
+        // If INSERT fails (RLS/policy), don't block the UI — fallback to minimal profile
         console.error('profiles INSERT error for user', user.id, insertError);
-        if (debugMode) appendDebug(`profiles INSERT error for user ${user.id}: ${JSON.stringify(insertError)}`);
-        setProfile(null);
+        const fallbackProfile = {
+          full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || null,
+          avatar_url: (user.user_metadata as any)?.avatar_url || null,
+        };
+        setProfile(fallbackProfile as any);
         setNeedsTermsAcceptance(false);
         setNeedsUsernameSetup(false);
         return;
@@ -256,28 +244,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }}
     >
       {children}
-
-      {/* Visible debug overlay to inspect auth/profile state on refresh when enabled */}
-      {debugMode && (
-        <div aria-hidden style={{position: 'fixed', right: 12, bottom: 12, zIndex: 9999, width: 360, maxHeight: '60vh', overflow: 'auto', background: 'rgba(0,0,0,0.8)', color: '#fff', fontSize: 12, padding: 10, borderRadius: 8}}>
-          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6}}>
-            <strong>Auth Debug</strong>
-            <button onClick={() => {
-              try {
-                localStorage.removeItem('debugAuth');
-              } catch (e) {}
-              setDebugMode(false);
-            }} style={{background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', padding: '2px 6px', borderRadius: 4}}>Close</button>
-          </div>
-          <div style={{marginBottom: 6}}><strong>user:</strong> {user ? user.id : 'null'}</div>
-          <div style={{marginBottom: 6}}><strong>email:</strong> {user?.email ?? 'null'}</div>
-          <div style={{marginBottom: 6}}><strong>profile:</strong></div>
-          <pre style={{whiteSpace: 'pre-wrap', fontSize: 11, lineHeight: '1.1'}}>{profile ? JSON.stringify(profile, null, 2) : 'null'}</pre>
-          <div style={{marginTop: 8}}><strong>Recent events / errors</strong></div>
-          <pre style={{whiteSpace: 'pre-wrap', fontSize: 11, marginTop: 6}}>{debugLog || '— no events captured —'}</pre>
-          <div style={{marginTop: 8, fontSize: 11, opacity: 0.8}}>Disable with: localStorage.removeItem('debugAuth'); location.reload();</div>
-        </div>
-      )}
     </AuthContext.Provider>
   );
 };
