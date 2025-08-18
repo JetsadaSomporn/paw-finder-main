@@ -89,27 +89,30 @@ const FoundPetForm: React.FC = () => {
     container.style.boxShadow = '0 6px 18px rgba(0,0,0,0.08)';
     container.style.fontSize = '14px';
     container.style.color = '#333';
-    container.style.width = '260px';
+    container.style.width = 'auto';
+    container.style.visibility = 'hidden';
     container.innerHTML = `
       <div style="white-space:nowrap;padding:6px 12px">กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
     `;
     document.body.appendChild(container);
 
-  const baseHintWidth = 260;
-  const minExpandedWidth = 520;
     const updatePosition = () => {
       const rect = signinEl ? signinEl.getBoundingClientRect() : null;
       if (rect) {
-        const desiredWidth = Math.max(minExpandedWidth, rect.width + 80, baseHintWidth);
-        let left = rect.left + rect.width / 2 - desiredWidth / 2;
-        left = Math.max(8, Math.min(left, window.innerWidth - desiredWidth - 8));
-        container.style.width = `${desiredWidth}px`;
+        container.style.width = 'auto';
+        container.style.visibility = 'hidden';
+        const measured = container.getBoundingClientRect();
+        const cw = measured.width || 200;
+        let left = rect.left + rect.width / 2 - cw / 2;
+        left = Math.max(8, Math.min(left, window.innerWidth - cw - 8));
         container.style.left = `${left}px`;
         container.style.top = `${rect.bottom + 8}px`;
+        container.style.visibility = 'visible';
       } else {
-        container.style.width = `${minExpandedWidth}px`;
+        container.style.width = 'auto';
         container.style.right = '16px';
         container.style.top = '72px';
+        container.style.visibility = 'visible';
       }
     };
 

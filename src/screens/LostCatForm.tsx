@@ -111,32 +111,37 @@ const LostCatForm: React.FC = () => {
     container.style.boxShadow = '0 6px 18px rgba(0,0,0,0.08)';
     container.style.fontSize = '14px';
     container.style.color = '#333';
-    container.style.width = '260px';
+    // start hidden and let updatePosition measure the natural width of the text
+    container.style.width = 'auto';
+    container.style.visibility = 'hidden';
     container.innerHTML = `
       <div style="white-space:nowrap;padding:6px 12px">กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
     `;
 
     document.body.appendChild(container);
 
-  // increase width so the hint fully covers the Sign In button behind it
-  const baseHintWidth = 260;
-  const minExpandedWidth = 520; // make it visibly longer to cover header button
-
+    // auto-size the hint to the message text and center under the Sign In link
     const updatePosition = () => {
       const rect = signinEl ? signinEl.getBoundingClientRect() : null;
       if (rect) {
-        const desiredWidth = Math.max(minExpandedWidth, rect.width + 80, baseHintWidth);
-        let left = rect.left + rect.width / 2 - desiredWidth / 2;
-        left = Math.max(8, Math.min(left, window.innerWidth - desiredWidth - 8));
-        const top = rect.bottom + 8; // distance from the bottom of the sign-in element
-        container.style.width = `${desiredWidth}px`;
+        // ensure natural width is applied, measure it hidden then show
+        container.style.width = 'auto';
+        container.style.visibility = 'hidden';
+        // need a small delay for layout in some browsers (but sync should usually work)
+        const measured = container.getBoundingClientRect();
+        const cw = measured.width || 200;
+        let left = rect.left + rect.width / 2 - cw / 2;
+        left = Math.max(8, Math.min(left, window.innerWidth - cw - 8));
+        const top = rect.bottom + 8;
         container.style.left = `${left}px`;
         container.style.top = `${top}px`;
+        container.style.visibility = 'visible';
       } else {
-        // fallback to top-right
-        container.style.width = `${minExpandedWidth}px`;
+        // fallback to small centered box near top-right
+        container.style.width = 'auto';
         container.style.right = '16px';
         container.style.top = '72px';
+        container.style.visibility = 'visible';
       }
     };
 

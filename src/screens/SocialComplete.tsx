@@ -75,7 +75,7 @@ const SocialComplete: React.FC = () => {
   const handleSave = async () => {
     setError('');
     if (!validateUsername(username)) {
-      setError('Username ต้องมี 3-30 ตัวอักษร และใช้ได้เฉพาะ a-z, 0-9, _');
+      setError('ตั้งชื่อผู้ใช้');
       return;
     }
 
