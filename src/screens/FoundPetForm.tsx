@@ -77,7 +77,7 @@ const FoundPetForm: React.FC = () => {
 
   const onSubmit: SubmitHandler<FoundPetFormInputs> = async (data) => {
     if (!user) {
-      toast((t: any) => (
+  toast((t: any) => (
         <div className="flex items-center gap-4">
           <div>กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
           <button
@@ -90,7 +90,7 @@ const FoundPetForm: React.FC = () => {
             เข้าสู่ระบบ
           </button>
         </div>
-      ), { position: 'top-right' });
+  ), { position: 'top-right', style: { right: '140px' } });
       return;
     }
     try {
