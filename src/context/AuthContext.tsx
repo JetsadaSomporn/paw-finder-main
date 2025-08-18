@@ -208,10 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     init();
 
     // Listen for changes on auth state (sign in, sign out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.debug('AuthContext.onAuthStateChange event:', event, 'user:', session?.user?.id ?? null);
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         await handleUserProfile(session.user);
@@ -236,37 +233,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProfileError(null);
     const step = 'handleUserProfile';
     try {
-      // fetch existing profile
+      // fetch existing profile by id
       const { data: existingProfile, error: selectError, status } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
+
       if (selectError) {
         const errCode = (selectError as any).code || (selectError as any).status || null;
         const errMsg = selectError.message || String(selectError);
         const ts = new Date().toISOString();
-        console.warn('[AuthContext] SELECT error', { userId: user.id, code: errCode, message: errMsg, status, step });
-        if (String(errCode) === 'PGRST116' || /no rows found/i.test(errMsg)) {
-          // Try to create profile when select reports no rows
+
+        // If the error indicates no rows, attempt to find a profile by the user's email as a safer fallback
+        const looksLikeNoRows = String(errCode) === 'PGRST116' || /no rows found/i.test(errMsg);
+        if (looksLikeNoRows || !existingProfile) {
+          // try email-based lookup if email present
+          const email = (user.email || (user.user_metadata as any)?.email) as string | undefined | null;
+          if (email) {
+            const { data: byEmail, error: emailErr } = await supabase
+              .from('profiles')
+              .select('*')
+              .ilike('email', email)
+              .maybeSingle();
+
+            if (!emailErr && byEmail) {
+              // Found a profile matching the user's email — use it as the canonical profile
+              setProfile(byEmail);
+              setNeedsTermsAcceptance(!byEmail.terms_accepted_at);
+              setNeedsUsernameSetup(!byEmail.username);
+              setProfileLoading(false);
+              return;
+            }
+          }
+
+          // If no email-match, attempt to create a profile for fresh social users
           const newProfile = {
             id: user.id,
             full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || null,
             avatar_url: (user.user_metadata as any)?.avatar_url || null,
+            email: user.email || (user.user_metadata as any)?.email || null,
           };
+
           const { data: createdProfile, error: insertError, status: insertStatus } = await supabase
             .from('profiles')
             .insert([newProfile])
             .select()
             .single();
+
           if (insertError) {
-            console.error('[AuthContext] INSERT after PGRST116 failed', user.id, insertError, 'status:', insertStatus);
             setProfile(null);
             setNeedsTermsAcceptance(false);
             setNeedsUsernameSetup(false);
             setProfileError({
               type: insertStatus === 403 ? 'rls_error' : 'insert_error',
-              step: 'insert-after-select-PGRST116',
+              step: 'insert-after-select',
               message: insertError.message || String(insertError),
               code: insertError.code || insertStatus || null,
               status: insertStatus,
@@ -277,13 +298,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProfileLoading(false);
             return;
           }
+
           setProfile(createdProfile || newProfile);
           setNeedsTermsAcceptance(true);
           setNeedsUsernameSetup(true);
           setProfileLoading(false);
           return;
         }
-        // Other select errors — likely RLS or network. Set error flag so UI can show message or force sign out.
+
+        // Other select errors (network/rls)
         const requiresSignOut = status === 401 || status === 403;
         setProfile(null);
         setNeedsTermsAcceptance(false);
@@ -301,21 +324,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfileLoading(false);
         return;
       }
-      // No select error
+
+      // No select error and we have the existingProfile variable
       if (!existingProfile) {
-        // ผู้ใช้ใหม่จาก Social Login - สร้าง profile
+        // No profile by id — try email-based lookup before creating
+        const email = (user.email || (user.user_metadata as any)?.email) as string | undefined | null;
+        if (email) {
+          const { data: byEmail, error: emailErr } = await supabase
+            .from('profiles')
+            .select('*')
+            .ilike('email', email)
+            .maybeSingle();
+          if (!emailErr && byEmail) {
+            setProfile(byEmail);
+            setNeedsTermsAcceptance(!byEmail.terms_accepted_at);
+            setNeedsUsernameSetup(!byEmail.username);
+            setProfileLoading(false);
+            return;
+          }
+        }
+
+        // create a new profile for social/new user
         const newProfile = {
           id: user.id,
           full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || null,
           avatar_url: (user.user_metadata as any)?.avatar_url || null,
+          email: user.email || (user.user_metadata as any)?.email || null,
         };
+
         const { data: createdProfile, error: insertError, status: insertStatus } = await supabase
           .from('profiles')
           .insert([newProfile])
           .select()
           .single();
+
         if (insertError) {
-          console.error('[AuthContext] INSERT error for user', user.id, insertError, 'status:', insertStatus);
           setProfile(null);
           setNeedsTermsAcceptance(false);
           setNeedsUsernameSetup(false);
@@ -332,9 +375,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfileLoading(false);
           return;
         }
+
         setProfile(createdProfile || newProfile);
-        setNeedsTermsAcceptance(true); // ผู้ใช้ใหม่ต้องยอมรับ Terms
-        setNeedsUsernameSetup(true); // ผู้ใช้ใหม่ต้องตั้ง Username
+        setNeedsTermsAcceptance(true);
+        setNeedsUsernameSetup(true);
         setProfileLoading(false);
       } else {
         setProfile(existingProfile);
