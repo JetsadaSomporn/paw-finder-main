@@ -15,6 +15,8 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  profileLoading: boolean;
+  profileError: { type: 'none' | 'select_error' | 'insert_error' | 'timeout'; message?: string; status?: number | null } | null;
   needsTermsAcceptance: boolean;
   needsUsernameSetup: boolean;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
@@ -37,6 +39,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState<{ type: 'none' | 'select_error' | 'insert_error' | 'timeout'; message?: string; status?: number | null } | null>(null);
   const [needsTermsAcceptance, setNeedsTermsAcceptance] = useState(false);
   const [needsUsernameSetup, setNeedsUsernameSetup] = useState(false);
 
@@ -172,53 +176,76 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const handleUserProfile = async (user: User) => {
-    // ดึง profile ที่มีอยู่ (ตรวจ error เพื่อจับ RLS/permission failures)
-    const { data: existingProfile, error: selectError, status } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .maybeSingle();
+    setProfileLoading(true);
+    setProfileError(null);
+    // helper to retry an async fn up to n times
+    const retry = async (fn: () => Promise<any>, attempts = 3, delayMs = 200) => {
+      let lastErr;
+      for (let i = 0; i < attempts; i++) {
+        try {
+          return await fn();
+        } catch (e) {
+          lastErr = e;
+          await new Promise(r => setTimeout(r, delayMs));
+          delayMs *= 2;
+        }
+      }
+      throw lastErr;
+    };
 
-    if (selectError) {
-      // Log error and do NOT fallback immediately
-      console.error('[AuthContext] profiles SELECT error for user', user.id, selectError, 'status:', status);
-      setProfile(null);
-      setNeedsTermsAcceptance(false);
-      setNeedsUsernameSetup(false);
-      // Optionally: set a UI error flag here for display
-      return;
-    }
-
-    if (!existingProfile) {
-      // ผู้ใช้ใหม่จาก Social Login - สร้าง profile
-      const newProfile = {
-        id: user.id,
-        full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
-        avatar_url: user.user_metadata?.avatar_url || null,
-      };
-
-      const { data: createdProfile, error: insertError, status: insertStatus } = await supabase
-        .from('profiles')
-        .insert([newProfile])
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('[AuthContext] profiles INSERT error for user', user.id, insertError, 'status:', insertStatus);
+    try {
+      // Try SELECT with retry; using supabase client which returns error object instead of throwing
+      let selectResult;
+      try {
+        selectResult = await retry(async () => {
+          const res = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+          if (res.error) throw res.error;
+          return res;
+        });
+      } catch (e: any) {
+        console.error('[AuthContext] profiles SELECT error for user', user.id, e);
         setProfile(null);
         setNeedsTermsAcceptance(false);
         setNeedsUsernameSetup(false);
-        // Optionally: set a UI error flag here for display
+        setProfileError({ type: 'select_error', message: e?.message || String(e), status: e?.status ?? null });
         return;
       }
 
-      setProfile(createdProfile || newProfile);
-      setNeedsTermsAcceptance(true); // ผู้ใช้ใหม่ต้องยอมรับ Terms
-      setNeedsUsernameSetup(true); // ผู้ใช้ใหม่ต้องตั้ง Username
-    } else {
-      setProfile(existingProfile);
-      setNeedsTermsAcceptance(!existingProfile.terms_accepted_at);
-      setNeedsUsernameSetup(!existingProfile.username);
+      const existingProfile = selectResult?.data ?? null;
+
+      if (!existingProfile) {
+        // user missing profile — create it (retry)
+        const newProfile = {
+          id: user.id,
+          full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+          avatar_url: user.user_metadata?.avatar_url || null,
+        };
+
+        try {
+          const createdRes = await retry(async () => {
+            const r = await supabase.from('profiles').insert([newProfile]).select().single();
+            if (r.error) throw r.error;
+            return r;
+          });
+          setProfile(createdRes.data || newProfile);
+          setNeedsTermsAcceptance(true);
+          setNeedsUsernameSetup(true);
+        } catch (e: any) {
+          console.error('[AuthContext] profiles INSERT error for user', user.id, e);
+          setProfile(null);
+          setNeedsTermsAcceptance(false);
+          setNeedsUsernameSetup(false);
+          setProfileError({ type: 'insert_error', message: e?.message || String(e), status: e?.status ?? null });
+          return;
+        }
+
+      } else {
+        setProfile(existingProfile);
+        setNeedsTermsAcceptance(!existingProfile.terms_accepted_at);
+        setNeedsUsernameSetup(!existingProfile.username);
+      }
+    } finally {
+      setProfileLoading(false);
     }
   };
 
@@ -228,6 +255,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user, 
         profile, 
         loading,
+  profileLoading,
+  profileError,
         needsTermsAcceptance,
         needsUsernameSetup,
   updateProfile,
