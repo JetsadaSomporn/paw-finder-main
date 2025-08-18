@@ -1,4 +1,3 @@
-// ฟังก์ชันสำหรับดึงเนื้อหา Terms of Service และ Privacy Policy จากไฟล์ .txt
 export const loadTermsOfService = async (): Promise<string> => {
   try {
     const response = await fetch('/term of service.txt');
