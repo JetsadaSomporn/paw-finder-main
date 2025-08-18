@@ -131,8 +131,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Check active sessions and sets the user
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('AuthContext.getSession result on init:', session?.user?.id ?? null, session);
+      }
       setUser(session?.user ?? null);
-      
+
       // ดึง profile เฉพาะเมื่อมี user
       if (session?.user) {
         await handleUserProfile(session.user);
@@ -141,14 +144,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setNeedsTermsAcceptance(false);
         setNeedsUsernameSetup(false);
       }
-      
+
       setLoading(false);
     });
 
     // Listen for changes on auth state (sign in, sign out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('AuthContext.onAuthStateChange event:', event, 'user:', session?.user?.id ?? null);
+      }
       setUser(session?.user ?? null);
-      
+
       if (session?.user) {
         await handleUserProfile(session.user);
       } else {
@@ -156,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setNeedsTermsAcceptance(false);
         setNeedsUsernameSetup(false);
       }
-      
+
       setLoading(false);
     });
 
