@@ -25,43 +25,19 @@ export const useFetchFoundPets = (): UseFetchFoundPetsReturn => {
       setLoading(true);
       setError(null);
 
-      // Fetch found pets data
+      // Fetch found pets and their images in a single relational select
       const { data: pets, error: petsError } = await supabase
         .from("found_pets")
-        .select("*")
+        .select("*, found_pet_images(*)")
         .eq("status", "active")
         .order("created_at", { ascending: false });
 
-      if (petsError) {
-        throw petsError;
-      }
+      if (petsError) throw petsError;
 
-      // Fetch images for each found pet
-      const petsWithImages = await Promise.all(
-        pets.map(async (pet) => {
-          const { data: images, error: imagesError } = await supabase
-            .from("found_pet_images")
-            .select("*")
-            .eq("found_pet_id", pet.id);
-
-          if (imagesError) {
-            console.warn(
-              `Error fetching images for found pet ${pet.id}:`,
-              imagesError
-            );
-            // Don't throw error for images, just continue without them
-            return {
-              ...pet,
-              images: [],
-            };
-          }
-
-          return {
-            ...pet,
-            images: images || [],
-          };
-        })
-      );
+      const petsWithImages = (pets || []).map((pet: any) => ({
+        ...pet,
+        images: (pet.found_pet_images as any[]) || [],
+      }));
 
       setFoundPets(petsWithImages);
     } catch (err) {
