@@ -487,7 +487,102 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Other select errors (network/RLS)
         const requiresSignOut = status === 401 || status === 403;
-        // As a robust fallback, construct a client-side profile object so UI can continue.
+
+        // If the error looks like an auth/expired token (401/403) try to refresh session
+        if (requiresSignOut) {
+          devLog('selectError.needsRefresh', { userId: user.id, status, errMsg });
+          let refreshSucceeded = false;
+          try {
+            // Prefer built-in refreshSession if available (different supabase-js versions)
+            const authAny: any = (supabase as any).auth;
+            if (authAny && typeof authAny.refreshSession === 'function') {
+              try {
+                const res: any = await authAny.refreshSession();
+                // Some versions return { data, error }
+                if (!res?.error) refreshSucceeded = true;
+              } catch (e) {
+                // fall through to storage-based fallback
+                devLog('refreshSession.throw', e);
+              }
+            }
+
+            // Fallback: try to rehydrate session from storage tokens (if refreshSession not present or failed)
+            if (!refreshSucceeded) {
+              try {
+                const supaUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+                if (supaUrl) {
+                  const ref = new URL(supaUrl).host.split('.')[0];
+                  const storageKey = `sb-${ref}-auth-token`;
+                  const raw = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey) || null;
+                  if (raw) {
+                    try {
+                      const parsed = JSON.parse(raw);
+                      const access_token = parsed?.access_token || parsed?.currentSession?.access_token || null;
+                      const refresh_token = parsed?.refresh_token || parsed?.currentSession?.refresh_token || null;
+                      if (access_token) {
+                        // @ts-ignore - setSession exists in v2
+                        await supabase.auth.setSession({ access_token, refresh_token });
+                        refreshSucceeded = true;
+                      }
+                    } catch (e) {
+                      devLog('rehydrate.parseError', e);
+                    }
+                  }
+                }
+              } catch (e) {
+                devLog('rehydrate.error', e);
+              }
+            }
+          } catch (e) {
+            devLog('refresh.attempt.error', e);
+          }
+
+          if (refreshSucceeded) {
+            // If refresh succeeded, retry the select once
+            devLog('refresh.succeeded.retrySelect', { userId: user.id });
+            try {
+              const { data: retriedProfile, error: retryError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .maybeSingle();
+              if (!retryError && retriedProfile) {
+                setProfile(retriedProfile as any);
+                setNeedsTermsAcceptance(!retriedProfile.terms_accepted_at);
+                setNeedsUsernameSetup(!retriedProfile.username);
+                setProfileLoading(false);
+                stopWatchdog();
+                devLog('done.afterRefresh', { userId: user.id, duration: Date.now() - startTs });
+                return;
+              }
+              // else fall through to fallback below
+            } catch (e) {
+              devLog('retry.select.error', e);
+            }
+          }
+
+          // If refresh didn't succeed, force sign-in flow: log and set error requiring sign out
+          console.warn('[AuthContext] auth token refresh failed - user must sign in again', { userId: user.id, status, errMsg });
+          setProfile(null);
+          setNeedsTermsAcceptance(false);
+          setNeedsUsernameSetup(false);
+          setProfileError({
+            type: 'rls_error',
+            step: 'select.refresh',
+            message: 'Authentication refresh failed, please sign in again',
+            code: errCode,
+            status,
+            requiresSignOut: true,
+            timestamp: ts,
+            extra: selectError,
+          });
+          setProfileLoading(false);
+          stopWatchdog();
+          devLog('done.refreshFailed', { userId: user.id, duration: Date.now() - startTs });
+          return;
+        }
+
+        // Non-auth select errors: As a robust fallback, construct a client-side profile object so UI can continue.
         const fallbackProfile: Profile = {
           id: user.id,
           username: user.email ? String(user.email).split('@')[0] : undefined,
