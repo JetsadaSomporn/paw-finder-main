@@ -245,8 +245,8 @@ const LostCatForm: React.FC = () => {
           const fileExt = file.name.split('.').pop();
           const fileName = `${Math.random()}.${fileExt}`;
           // const filePath = `${lostPet.id}/${fileName}`;
-          // const filePath = `public/${lostPet.id}/${fileName}`;
-          const filePath = `${lostPet.id}/${Date.now()}-${file.name.replace(/\s+/g,'_')}`;
+          const filePath = `public/${lostPet.id}/${fileName}`;
+          // const filePath = `${lostPet.id}/${Date.now()}-${fileName.replace(/\s+/g,'_')}`;
 
 
           // Upload the image to storage
