@@ -97,26 +97,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Remove likely supabase keys from storage to avoid stale sessions
       try {
+        const removed: string[] = [];
+        const shouldRemoveKey = (rawKey: string) => {
+          const k = rawKey.toLowerCase();
+          // Only remove well-known supabase/gotrue keys to avoid deleting unrelated 'auth' keys.
+          // Examples: 'supabase.auth.token', 'supabase.gotrue-js.current-user', 'sb-<ref>-auth-token'
+          if (k.startsWith('supabase')) return true;
+          if (k.startsWith('sb-') || k.startsWith('sb:')) return true;
+          if (k.includes('gotrue') && k.includes('supabase')) return true;
+          if (/^gotrue[:\.]/.test(k)) return true;
+          return false;
+        };
         for (let i = localStorage.length - 1; i >= 0; i--) {
           const key = localStorage.key(i);
           if (!key) continue;
-          const k = key.toLowerCase();
-          if (k.includes('supabase') || k.startsWith('sb:') || k.startsWith('sb-') || k.includes('auth')) {
-            localStorage.removeItem(key);
+          try {
+            if (shouldRemoveKey(key)) {
+              localStorage.removeItem(key);
+              removed.push(key);
+            }
+          } catch (e) {
+            // ignore per-key errors
           }
         }
-      } catch (e) {
-        /* ignore */
-      }
-      try {
         for (let i = sessionStorage.length - 1; i >= 0; i--) {
           const key = sessionStorage.key(i);
           if (!key) continue;
-          const k = key.toLowerCase();
-          if (k.includes('supabase') || k.startsWith('sb:') || k.startsWith('sb-') || k.includes('auth')) {
-            sessionStorage.removeItem(key);
+          try {
+            if (shouldRemoveKey(key)) {
+              sessionStorage.removeItem(key);
+              removed.push(key);
+            }
+          } catch (e) {
+            // ignore per-key errors
           }
         }
+        if (process.env.NODE_ENV === 'development') console.info('[AuthContext] removed storage keys during signOut', removed);
       } catch (e) {
         /* ignore */
       }
