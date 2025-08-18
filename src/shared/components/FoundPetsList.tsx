@@ -39,32 +39,19 @@ const FoundPetsList: React.FC = () => {
   const fetchFoundPets = async () => {
     try {
       setLoading(true);
-      
-      // Fetch found pets with their images
+      // Fetch found pets together with their images (relational select)
       const { data: pets, error: petsError } = await supabase
         .from('found_pets')
-        .select('*')
+        .select('*, found_pet_images(*)')
         .eq('status', 'active')
         .order('created_at', { ascending: false });
 
       if (petsError) throw petsError;
 
-      // Fetch images for each pet
-      const petsWithImages = await Promise.all(
-        pets.map(async (pet) => {
-          const { data: images, error: imagesError } = await supabase
-            .from('found_pet_images')
-            .select('*')
-            .eq('found_pet_id', pet.id);
-
-          if (imagesError) throw imagesError;
-
-          return {
-            ...pet,
-            images: images || []
-          };
-        })
-      );
+      const petsWithImages = (pets || []).map((pet: any) => ({
+        ...pet,
+        images: (pet.found_pet_images as any[]) || [],
+      }));
 
       setFoundPets(petsWithImages);
     } catch (error) {
