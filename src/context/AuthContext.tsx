@@ -3,6 +3,7 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
 interface Profile {
+  id?: string;
   username?: string;
   terms_accepted_at?: string;
   created_at?: string;
@@ -183,6 +184,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('profiles SELECT error for user', user.id, selectError);
 
       const fallbackProfile = {
+        id: user.id,
+        username: user.email ? user.email.split('@')[0] : undefined,
         full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || null,
         avatar_url: (user.user_metadata as any)?.avatar_url || null,
       };
@@ -212,6 +215,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // If INSERT fails (RLS/policy), don't block the UI — fallback to minimal profile
         console.error('profiles INSERT error for user', user.id, insertError);
         const fallbackProfile = {
+          id: user.id,
+          username: user.email ? user.email.split('@')[0] : undefined,
           full_name: (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || null,
           avatar_url: (user.user_metadata as any)?.avatar_url || null,
         };
