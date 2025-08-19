@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, UserPlus, User, X, FileText, Facebook } from 'lucide-react';
 import { FaGoogle } from 'react-icons/fa';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 import { loadTermsOfService, loadPrivacyPolicy } from '../shared/utils/documentLoader.util';
 
 
@@ -19,6 +20,7 @@ const SignUp: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { refreshProfile } = useAuth();
   const acceptRef = useRef<HTMLInputElement | null>(null);
 
   // โหลดเนื้อหาจากไฟล์ .txt เมื่อเปิด modal
@@ -152,7 +154,7 @@ const SignUp: React.FC = () => {
 
       // สร้าง profile พร้อม username
       if (data.user) {
-        await supabase
+        const { error: insertError } = await supabase
           .from('profiles')
           .insert([
             {
@@ -160,6 +162,18 @@ const SignUp: React.FC = () => {
               username: username,
             }
           ]);
+
+        if (insertError) {
+          // Surface the DB error so the user knows signup didn't persist fully
+          throw insertError;
+        }
+
+        // Best-effort: refresh auth context so UI shows username immediately
+        try {
+          await refreshProfile(data.user.id);
+        } catch (err) {
+          // ignore refresh failure
+        }
       }
 
       // Check if email confirmation is required
