@@ -6,6 +6,8 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   username: string | null;
+  fullName: string | null;
+  displayName: string | null;
   signOut: () => Promise<void>;
 }
 
@@ -13,6 +15,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   username: null,
+  fullName: null,
+  displayName: null,
   signOut: async () => {},
 });
 
@@ -22,6 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
+  const [fullName, setFullName] = useState<string | null>(null);
 
   const signOut = async () => {
     try {
@@ -40,10 +45,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         if (session?.user) {
           try {
-            const { data } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
+            const { data } = await supabase.from('profiles').select('username, full_name').eq('id', session.user.id).single();
             setUsername(data?.username ?? null);
+            setFullName(data?.full_name ?? null);
           } catch (e) {
             setUsername(null);
+            setFullName(null);
           }
         } else {
           setUsername(null);
@@ -64,8 +71,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         if (session?.user) {
           try {
-            const { data } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
+            const { data } = await supabase.from('profiles').select('username, full_name').eq('id', session.user.id).single();
             setUsername(data?.username ?? null);
+            setFullName(data?.full_name ?? null);
           } catch (e) {
             setUsername(null);
           }
@@ -79,8 +87,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
+  const displayName = username ?? fullName ?? null;
+
   return (
-    <AuthContext.Provider value={{ user, loading, username, signOut }}>
+    <AuthContext.Provider value={{ user, loading, username, fullName, displayName, signOut }}>
       {children}
     </AuthContext.Provider>
   );
