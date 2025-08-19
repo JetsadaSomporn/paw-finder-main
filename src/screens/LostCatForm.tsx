@@ -95,91 +95,55 @@ const LostCatForm: React.FC = () => {
   const [markerPlaced, setMarkerPlaced] = React.useState<boolean>(false);
   const [mapError, setMapError] = React.useState<string | null>(null);
   
-  // show a small hint anchored under the header sign-in link and follow it while scrolling
-  const showSignInHint = () => {
-    if (document.getElementById('auth-hint')) return;
+  // Inline auth panel state (replaces passive hint)
+  const [showAuthPanel, setShowAuthPanel] = React.useState(false);
+  const [authEmail, setAuthEmail] = React.useState('');
+  const [authPassword, setAuthPassword] = React.useState('');
+  const [authLoading, setAuthLoading] = React.useState(false);
 
-    const signinEl = document.querySelector('a[href="/signin"]');
-    const container = document.createElement('div');
-    container.id = 'auth-hint';
-    container.style.position = 'fixed'; // fixed so it stays relative to viewport
-    container.style.zIndex = '10000';
-    container.style.padding = '8px 12px';
-    container.style.background = 'white';
-    container.style.border = '1px solid rgba(0,0,0,0.08)';
-    container.style.borderRadius = '8px';
-    container.style.boxShadow = '0 6px 18px rgba(0,0,0,0.08)';
-    container.style.fontSize = '14px';
-    container.style.color = '#333';
-    // auto-size message-only hint (no action button)
-    container.style.width = 'auto';
-    container.style.visibility = 'hidden';
-    container.innerHTML = `
-      <div style="white-space:nowrap;padding:6px 12px">กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
-    `;
+  const handleOpenAuthPanel = (prefillEmail?: string) => {
+    if (prefillEmail) setAuthEmail(prefillEmail);
+    setShowAuthPanel(true);
+  };
 
-    document.body.appendChild(container);
+  const handleCloseAuthPanel = () => {
+    setShowAuthPanel(false);
+    setAuthEmail('');
+    setAuthPassword('');
+    setAuthLoading(false);
+  };
 
-  const hintShiftRight = 64; // increased offset to better align under the Sign In link
+  const handleAuthSignIn = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!authEmail) return toast.error('กรุณากรอกอีเมล');
+    setAuthLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: authEmail,
+        password: authPassword,
+      } as any);
+      if (error) throw error;
+      toast.success('เข้าสู่ระบบเรียบร้อย');
+      // reload so AuthContext rehydrates
+      window.location.reload();
+    } catch (err: any) {
+      toast.error(err?.message || 'เข้าสู่ระบบไม่สำเร็จ');
+      setAuthLoading(false);
+    }
+  };
 
-    const updatePosition = () => {
-      const rect = signinEl ? signinEl.getBoundingClientRect() : null;
-      if (rect) {
-        // ensure natural width is measured while hidden, then show
-        container.style.width = 'auto';
-        container.style.visibility = 'hidden';
-        const measured = container.getBoundingClientRect();
-        const cw = measured.width || 200;
-        let left = rect.left + rect.width / 2 - cw / 2 + hintShiftRight;
-        left = Math.max(8, Math.min(left, window.innerWidth - cw - 8));
-        const top = rect.bottom + 8;
-        container.style.left = `${left}px`;
-        container.style.top = `${top}px`;
-        container.style.visibility = 'visible';
-      } else {
-        // fallback to top-right
-        container.style.right = '16px';
-        container.style.top = '72px';
-        container.style.visibility = 'visible';
-      }
-    };
-
-    updatePosition();
-    window.addEventListener('scroll', updatePosition, { passive: true });
-    window.addEventListener('resize', updatePosition);
-
-  const removeHint = () => {
-      try {
-        window.removeEventListener('scroll', updatePosition);
-        window.removeEventListener('resize', updatePosition);
-      } catch (e) {
-        /* ignore */
-      }
-      container.remove();
-    };
-
-    // auto remove after 5 seconds
-    const autoRemove = setTimeout(() => {
-      removeHint();
-    }, 5000);
-
-    // cleanup if the element is removed by other means
-    const observer = new MutationObserver(() => {
-      if (!document.body.contains(container)) {
-        clearTimeout(autoRemove);
-        try {
-          window.removeEventListener('scroll', updatePosition);
-          window.removeEventListener('resize', updatePosition);
-        } catch (e) {}
-        observer.disconnect();
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+  const handleOAuth = async (provider: 'google' | 'facebook') => {
+    try {
+      await supabase.auth.signInWithOAuth({ provider });
+    } catch (e) {
+      if (process.env.NODE_ENV === 'development') console.error(e);
+      toast.error('ไม่สามารถเริ่มการเข้าสู่ระบบแบบ OAuth ได้');
+    }
   };
 
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
     if (!user) {
-      showSignInHint();
+      handleOpenAuthPanel(data.contactEmail || '');
       return;
     }
     // Validate that user has placed a marker on the map
@@ -323,6 +287,28 @@ const LostCatForm: React.FC = () => {
               </p>
             </div>
           </div>
+          {/* Inline auth panel (bottom-right) */}
+          {showAuthPanel && (
+            <div className="fixed right-4 bottom-4 z-[9999] w-[360px] bg-white rounded-lg shadow-lg border p-4" role="dialog" aria-modal>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium">เข้าสู่ระบบ</div>
+                <button onClick={handleCloseAuthPanel} className="text-gray-500">✕</button>
+              </div>
+              <form onSubmit={handleAuthSignIn} className="space-y-2">
+                <input type="email" placeholder="อีเมล" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} className="w-full border px-3 py-2 rounded" />
+                <input type="password" placeholder="รหัสผ่าน" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className="w-full border px-3 py-2 rounded" />
+                <div className="flex gap-2">
+                  <button type="submit" disabled={authLoading} className="flex-1 bg-[#F4A261] text-white py-2 rounded">{authLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}</button>
+                  <button type="button" onClick={() => window.location.href = '/signin'} className="px-3 py-2 rounded border">หน้าเข้าสู่ระบบ</button>
+                </div>
+                <div className="mt-2 text-center text-sm text-gray-500">หรือเข้าสู่ระบบด้วย</div>
+                <div className="flex gap-2 mt-2">
+                  <button type="button" onClick={() => handleOAuth('google')} className="flex-1 border rounded py-2">Google</button>
+                  <button type="button" onClick={() => handleOAuth('facebook')} className="flex-1 border rounded py-2">Facebook</button>
+                </div>
+              </form>
+            </div>
+          )}
           <form
             onSubmit={handleSubmit(onSubmit)}
             className="p-6 md:p-8 bg-white"
