@@ -73,80 +73,92 @@ const FoundPetForm: React.FC = () => {
   } = watch();
 
   const { user } = useAuth();
+  // Marker & inline auth panel state
+  const [markerPlaced, setMarkerPlaced] = React.useState<boolean>(false);
+  const [mapError, setMapError] = React.useState<string | null>(null);
 
-  const showSignInHint = () => {
-    if (document.getElementById('auth-hint')) return;
-    const signinEl = document.querySelector('a[href="/signin"]');
-    const container = document.createElement('div');
-    container.id = 'auth-hint';
-    container.style.position = 'fixed';
-    container.style.zIndex = '10000';
-    container.style.padding = '8px 12px';
-    container.style.background = 'white';
-    container.style.border = '1px solid rgba(0,0,0,0.08)';
-    container.style.borderRadius = '8px';
-    container.style.boxShadow = '0 6px 18px rgba(0,0,0,0.08)';
-    container.style.fontSize = '14px';
-    container.style.color = '#333';
-    container.style.width = 'auto';
-    container.style.visibility = 'hidden';
-    container.innerHTML = `
-      <div style="white-space:nowrap;padding:6px 12px">กรุณาเข้าสู่ระบบก่อนส่งข้อมูล</div>
-    `;
-    document.body.appendChild(container);
+  // Inline auth panel (anchored under top-right sign-in link if present)
+  const [showAuthPanel, setShowAuthPanel] = React.useState(false);
+  const [authEmail, setAuthEmail] = React.useState('');
+  const [authPassword, setAuthPassword] = React.useState('');
+  const [authLoading, setAuthLoading] = React.useState(false);
+  const [authPanelPos, setAuthPanelPos] = React.useState<{ left?: number; top?: number; right?: number }>(() => ({}));
 
-  const hintShiftRight = 64; // increased offset to better align under the Sign In link
-    const updatePosition = () => {
-      const rect = signinEl ? signinEl.getBoundingClientRect() : null;
-      if (rect) {
-        container.style.width = 'auto';
-        container.style.visibility = 'hidden';
-        const measured = container.getBoundingClientRect();
-        const cw = measured.width || 200;
-        let left = rect.left + rect.width / 2 - cw / 2 + hintShiftRight;
-        left = Math.max(8, Math.min(left, window.innerWidth - cw - 8));
-        container.style.left = `${left}px`;
-        container.style.top = `${rect.bottom + 8}px`;
-        container.style.visibility = 'visible';
-      } else {
-        container.style.right = '16px';
-        container.style.top = '72px';
-        container.style.visibility = 'visible';
-      }
+  const computeAuthPanelPos = (offsetX = 0) => {
+    const signinEl = document.querySelector('a[href="/signin"]') || document.querySelector('[data-signin]') || document.querySelector('a[href*="signin"]');
+    if (signinEl && (signinEl as HTMLElement).getBoundingClientRect) {
+      const rect = (signinEl as HTMLElement).getBoundingClientRect();
+      const left = rect.left + rect.width / 2 + offsetX;
+      const top = rect.bottom + 8;
+      setAuthPanelPos({ left: Math.round(left), top: Math.round(top) });
+    } else {
+      setAuthPanelPos({ right: 16, top: 72 });
+    }
+  };
+
+  const handleOpenAuthPanel = (prefillEmail?: string) => {
+    if (prefillEmail) setAuthEmail(prefillEmail);
+    computeAuthPanelPos();
+    setShowAuthPanel(true);
+  };
+
+  const handleCloseAuthPanel = () => {
+    setShowAuthPanel(false);
+    setAuthEmail('');
+    setAuthPassword('');
+    setAuthLoading(false);
+  };
+
+  React.useEffect(() => {
+    if (!showAuthPanel) return;
+    const onUpdate = () => computeAuthPanelPos();
+    window.addEventListener('resize', onUpdate);
+    window.addEventListener('scroll', onUpdate, { passive: true });
+    return () => {
+      window.removeEventListener('resize', onUpdate);
+      window.removeEventListener('scroll', onUpdate);
     };
+  }, [showAuthPanel]);
 
-    updatePosition();
-    window.addEventListener('scroll', updatePosition, { passive: true });
-    window.addEventListener('resize', updatePosition);
+  const handleAuthSignIn = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!authEmail) return toast.error('กรุณากรอกอีเมล');
+    setAuthLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: authEmail,
+        password: authPassword,
+      } as any);
+      if (error) throw error;
+      toast.success('เข้าสู่ระบบเรียบร้อย');
+      window.location.reload();
+    } catch (err: any) {
+      toast.error(err?.message || 'เข้าสู่ระบบไม่สำเร็จ');
+      setAuthLoading(false);
+    }
+  };
 
-  const removeHint = () => {
-      try {
-        window.removeEventListener('scroll', updatePosition);
-        window.removeEventListener('resize', updatePosition);
-      } catch (e) {}
-      container.remove();
-    };
-
-    const autoRemove = setTimeout(() => {
-      removeHint();
-    }, 5000);
-
-    const observer = new MutationObserver(() => {
-      if (!document.body.contains(container)) {
-        clearTimeout(autoRemove);
-        try {
-          window.removeEventListener('scroll', updatePosition);
-          window.removeEventListener('resize', updatePosition);
-        } catch (e) {}
-        observer.disconnect();
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+  const handleOAuth = async (provider: 'google' | 'facebook') => {
+    try {
+      await supabase.auth.signInWithOAuth({ provider });
+    } catch (e) {
+      if (process.env.NODE_ENV === 'development') console.error(e);
+      toast.error('ไม่สามารถเริ่มการเข้าสู่ระบบแบบ OAuth ได้');
+    }
   };
 
   const onSubmit: SubmitHandler<FoundPetFormInputs> = async (data) => {
     if (!user) {
-      showSignInHint();
+      handleOpenAuthPanel(data.contactEmail || '');
+      return;
+    }
+    // Validate that user has placed a marker
+    if (!markerPlaced) {
+      setMapError('กรุณาปักหมุดตำแหน่งบนแผนที่ก่อนส่งข้อมูล');
+      const mapContainer = document.querySelector('.rounded-xl.mt-2');
+      if (mapContainer && (mapContainer as HTMLElement).scrollIntoView) {
+        (mapContainer as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
     try {
@@ -262,6 +274,39 @@ const FoundPetForm: React.FC = () => {
               </p>
             </div>
           </div>
+
+          {/* Inline auth panel (anchored under top-right sign-in link if present) */}
+          {showAuthPanel && (
+            <div
+              className="fixed z-[9999] w-[360px] bg-white rounded-lg shadow-lg border p-4"
+              role="dialog"
+              aria-modal
+              style={{
+                left: authPanelPos.left ? `${authPanelPos.left}px` : undefined,
+                right: authPanelPos.right ? `${authPanelPos.right}px` : undefined,
+                top: authPanelPos.top ? `${authPanelPos.top}px` : undefined,
+                transform: authPanelPos.left ? 'translateX(-50%)' : undefined,
+              }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium">เข้าสู่ระบบ</div>
+                <button onClick={handleCloseAuthPanel} className="text-gray-500">✕</button>
+              </div>
+              <form onSubmit={handleAuthSignIn} className="space-y-2">
+                <input type="email" placeholder="อีเมล" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} className="w-full border px-3 py-2 rounded" />
+                <input type="password" placeholder="รหัสผ่าน" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className="w-full border px-3 py-2 rounded" />
+                <div className="flex gap-2">
+                  <button type="submit" disabled={authLoading} className="flex-1 bg-[#F4A261] text-white py-2 rounded">{authLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}</button>
+                  <button type="button" onClick={() => window.location.href = '/signin'} className="px-3 py-2 rounded border">หน้าเข้าสู่ระบบ</button>
+                </div>
+                <div className="mt-2 text-center text-sm text-gray-500">หรือเข้าสู่ระบบด้วย</div>
+                <div className="flex gap-2 mt-2">
+                  <button type="button" onClick={() => handleOAuth('google')} className="flex-1 border rounded py-2">Google</button>
+                  <button type="button" onClick={() => handleOAuth('facebook')} className="flex-1 border rounded py-2">Facebook</button>
+                </div>
+              </form>
+            </div>
+          )}
 
           <form
             onSubmit={handleSubmit(onSubmit)}
@@ -407,7 +452,7 @@ const FoundPetForm: React.FC = () => {
                 <MapPin className="w-5 h-5 text-[#F4A261]" /> ตำแหน่งที่พบ
               </h2>
               <div className="rounded-xl border border-[#F4A261]/30 overflow-hidden">
-                <MapSelector onLocationSelect={handleLocationSelect} />
+                  <MapSelector onLocationSelect={handleLocationSelect} onUserLocationSelect={(_lat,_lng)=>{ setMarkerPlaced(true); setMapError(null); }} />
               </div>
             </div>
 
