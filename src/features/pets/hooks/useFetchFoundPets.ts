@@ -1,4 +1,4 @@
-import { supabasePublic } from "@/lib/supabasePublic";
+import { supabase } from "@/lib/supabase";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { FoundPet } from "../types";
@@ -25,7 +25,7 @@ export const useFetchFoundPets = (): UseFetchFoundPetsReturn => {
       setLoading(true);
       setError(null);
       // Fetch found pets and their images in one relational select using the public client
-      const { data: petsWithImages, error: petsError } = await supabasePublic
+  const { data: petsWithImages, error: petsError } = await supabase
         .from("found_pets")
         .select("*, found_pet_images(*)")
         .eq("status", "active")
