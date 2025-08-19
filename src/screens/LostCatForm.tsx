@@ -113,6 +113,35 @@ const LostCatForm: React.FC = () => {
     setAuthLoading(false);
   };
 
+  // Position the inline auth panel under the top-right sign-in link when possible
+  const [authPanelPos, setAuthPanelPos] = React.useState<{ left?: number; top?: number; right?: number }>(() => ({}));
+
+  const computeAuthPanelPos = (offsetX = 0) => {
+    // try common selectors for sign-in link/button
+    const signinEl = document.querySelector('a[href="/signin"]') || document.querySelector('[data-signin]') || document.querySelector('a[href*="signin"]');
+    if (signinEl && (signinEl as HTMLElement).getBoundingClientRect) {
+      const rect = (signinEl as HTMLElement).getBoundingClientRect();
+      const left = rect.left + rect.width / 2 + offsetX;
+      const top = rect.bottom + 8;
+      setAuthPanelPos({ left: Math.round(left), top: Math.round(top) });
+    } else {
+      // fallback to top-right corner offset
+      setAuthPanelPos({ right: 16, top: 72 });
+    }
+  };
+
+  React.useEffect(() => {
+    if (!showAuthPanel) return;
+    computeAuthPanelPos();
+    const onUpdate = () => computeAuthPanelPos();
+    window.addEventListener('resize', onUpdate);
+    window.addEventListener('scroll', onUpdate, { passive: true });
+    return () => {
+      window.removeEventListener('resize', onUpdate);
+      window.removeEventListener('scroll', onUpdate);
+    };
+  }, [showAuthPanel]);
+
   const handleAuthSignIn = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!authEmail) return toast.error('กรุณากรอกอีเมล');
@@ -287,9 +316,19 @@ const LostCatForm: React.FC = () => {
               </p>
             </div>
           </div>
-          {/* Inline auth panel (bottom-right) */}
+          {/* Inline auth panel (anchored under top-right sign-in link if present) */}
           {showAuthPanel && (
-            <div className="fixed right-4 bottom-4 z-[9999] w-[360px] bg-white rounded-lg shadow-lg border p-4" role="dialog" aria-modal>
+            <div
+              className="fixed z-[9999] w-[360px] bg-white rounded-lg shadow-lg border p-4"
+              role="dialog"
+              aria-modal
+              style={{
+                left: authPanelPos.left ? `${authPanelPos.left}px` : undefined,
+                right: authPanelPos.right ? `${authPanelPos.right}px` : undefined,
+                top: authPanelPos.top ? `${authPanelPos.top}px` : undefined,
+                transform: authPanelPos.left ? 'translateX(-50%)' : undefined,
+              }}
+            >
               <div className="flex items-center justify-between mb-2">
                 <div className="text-sm font-medium">เข้าสู่ระบบ</div>
                 <button onClick={handleCloseAuthPanel} className="text-gray-500">✕</button>
