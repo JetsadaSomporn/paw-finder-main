@@ -24,16 +24,46 @@ export const useFetchFoundPets = (): UseFetchFoundPetsReturn => {
     try {
       setLoading(true);
       setError(null);
-      // Fetch found pets and their images in one relational select using the public client
-  const { data: petsWithImages, error: petsError } = await supabase
+
+      // Fetch found pets data
+      const { data: pets, error: petsError } = await supabase
         .from("found_pets")
-        .select("*, found_pet_images(*)")
+        .select("*")
         .eq("status", "active")
         .order("created_at", { ascending: false });
 
-      if (petsError) throw petsError;
+      if (petsError) {
+        throw petsError;
+      }
 
-      setFoundPets((petsWithImages || []) as any);
+      // Fetch images for each found pet
+      const petsWithImages = await Promise.all(
+        pets.map(async (pet) => {
+          const { data: images, error: imagesError } = await supabase
+            .from("found_pet_images")
+            .select("*")
+            .eq("found_pet_id", pet.id);
+
+          if (imagesError) {
+            console.warn(
+              `Error fetching images for found pet ${pet.id}:`,
+              imagesError
+            );
+            // Don't throw error for images, just continue without them
+            return {
+              ...pet,
+              images: [],
+            };
+          }
+
+          return {
+            ...pet,
+            images: images || [],
+          };
+        })
+      );
+
+      setFoundPets(petsWithImages);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการโหลดข้อมูล";

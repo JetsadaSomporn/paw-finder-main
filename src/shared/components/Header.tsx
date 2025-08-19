@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Link, useLocation as useRouterLocation } from 'react-router-dom';
 
 const Header: React.FC = () => {
-  const { user, profile, profileLoading, signOut } = useAuth();
+  const { user, username, loading: profileLoading, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const routerLocation = useRouterLocation();
   const currentState = (routerLocation.state as any) || undefined;
@@ -93,7 +93,7 @@ const Header: React.FC = () => {
                     <span className="inline-block w-20 h-4 bg-gray-200 rounded animate-pulse align-middle" aria-label="กำลังโหลดโปรไฟล์" />
                   )}
                   {!profileLoading && user && (
-                    <>สวัสดี, {profile?.username || user.email?.split('@')[0] || 'ผู้ใช้'}</>
+                    <>สวัสดี, {username || user.email?.split('@')[0] || 'ผู้ใช้'}</>
                   )}
                 </span>
                 <button
@@ -186,7 +186,7 @@ const Header: React.FC = () => {
                     <span className="inline-block w-24 h-4 bg-gray-200 rounded animate-pulse" aria-label="กำลังโหลดโปรไฟล์" />
                   )}
                   {!profileLoading && user && (
-                    <>สวัสดี, {profile?.username || user.email?.split('@')[0] || 'ผู้ใช้'}</>
+                    <>สวัสดี, {username || user.email?.split('@')[0] || 'ผู้ใช้'}</>
                   )}
                 </p>
                 <button

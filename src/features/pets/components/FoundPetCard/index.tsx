@@ -23,7 +23,7 @@ const FoundPetCard: React.FC<FoundPetCardProps> = ({
 }) => {
   return (
     <>
-  <div className="bg-white rounded-2xl shadow-lg overflow-hidden w-full flex flex-col font-[Rounded Sans Serif,sans-serif]">
+      <div className="bg-white rounded-2xl shadow-lg overflow-hidden w-full max-w-sm flex flex-col font-[Rounded Sans Serif,sans-serif]">
         <FoundPetCardImage pet={pet} />
         <div className="p-5 flex-grow flex flex-col">
           <h3 className="text-xl md:text-2xl font-bold text-[#1A1A1A] mb-1 truncate">
