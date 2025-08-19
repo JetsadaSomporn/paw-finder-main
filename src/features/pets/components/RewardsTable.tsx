@@ -14,13 +14,18 @@ interface RewardsTableProps {
 const RewardsTable: React.FC<RewardsTableProps> = ({ lostPets, userLocation }) => {
   const openModal = useRewardStore((state) => state.openModal);
 
+  // Defensive guards
+  const petsList = Array.isArray(lostPets) ? lostPets : [];
+
   const formatReward = (reward: number | null) => {
     if (reward === null) return '-';
     return `฿${reward.toLocaleString()}`;
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) return '-';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '-';
     return date.toLocaleDateString('th-TH', {
       day: '2-digit',
       month: 'short',
@@ -45,7 +50,7 @@ const RewardsTable: React.FC<RewardsTableProps> = ({ lostPets, userLocation }) =
             </tr>
           </thead>
           <tbody>
-      {lostPets.map((pet, index) => (
+  {petsList.map((pet, index) => (
               <tr key={pet.id} className="border-b">
                 <td className="py-4 px-2">
                   <div className="w-8 h-8 bg-orange-200 rounded-full flex items-center justify-center font-bold text-orange-600">
@@ -54,7 +59,7 @@ const RewardsTable: React.FC<RewardsTableProps> = ({ lostPets, userLocation }) =
                 </td>
                 <td className="py-4 px-2 flex items-center">
                   <img
-                    src={pet.images[0]?.image_url || '/cat-placeholder.png'}
+                    src={Array.isArray(pet.images) ? (pet.images[0]?.image_url || '/cat-placeholder.png') : '/cat-placeholder.png'}
                     alt={pet.pet_name}
                     className="w-10 h-10 rounded-full mr-4 object-cover"
                   />
@@ -67,9 +72,9 @@ const RewardsTable: React.FC<RewardsTableProps> = ({ lostPets, userLocation }) =
                 </td>
                 <td className="py-4 px-2 text-gray-600">
                   {pet.location}, {translateProvince(pet.province)}
-                  {userLocation && pet.latitude && pet.longitude && (
+                  {userLocation && isFinite(Number(pet.latitude)) && isFinite(Number(pet.longitude)) && (
                     <span className="ml-2 text-xs text-gray-400">
-                      • {calculateDistance(userLocation.latitude, userLocation.longitude, pet.latitude, pet.longitude).toFixed(1)} กม.
+                      • {calculateDistance(Number(userLocation.latitude), Number(userLocation.longitude), Number(pet.latitude), Number(pet.longitude)).toFixed(1)} กม.
                     </span>
                   )}
                 </td>
@@ -97,7 +102,7 @@ const RewardsTable: React.FC<RewardsTableProps> = ({ lostPets, userLocation }) =
       </div>
       {/* Mobile Cards */}
       <div className="block md:hidden space-y-4">
-    {lostPets.map((pet, index) => (
+  {petsList.map((pet, index) => (
           <div
             key={pet.id}
             className="rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3"
