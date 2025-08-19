@@ -234,6 +234,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // mark when initial init() has completed so we can ignore transient auth events
   let initDone = false;
     async function init() {
+      // Early token sanitiser: detect expired JWTs stored by supabase and clear them to avoid
+      // attaching stale Authorization headers on public requests which can cause 401/403.
+      try {
+        const supaUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+        if (supaUrl) {
+          const ref = new URL(supaUrl).host.split('.')[0];
+          const storageKey = `sb-${ref}-auth-token`;
+          const raw = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey) || null;
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              const token = parsed?.access_token || parsed?.currentSession?.access_token || parsed?.session?.access_token || null;
+              if (token && typeof token === 'string') {
+                // try to parse JWT exp
+                const parts = token.split('.');
+                if (parts.length === 3) {
+                  try {
+                    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+                    const exp = payload?.exp;
+                    if (typeof exp === 'number') {
+                      const now = Math.floor(Date.now() / 1000);
+                      if (exp < now) {
+                        // Clear known supabase/gotrue keys then reload to ensure anonymous client
+                        for (let i = localStorage.length - 1; i >= 0; i--) {
+                          const key = localStorage.key(i);
+                          if (!key) continue;
+                          const k = key.toLowerCase();
+                          if (k.startsWith('supabase') || k.startsWith('sb-') || k.startsWith('sb:') || (k.includes('gotrue') && k.includes('supabase')) || /^gotrue[:\.]/.test(k)) {
+                            try { localStorage.removeItem(key); } catch (e) {}
+                          }
+                        }
+                        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+                          const key = sessionStorage.key(i);
+                          if (!key) continue;
+                          const k = key.toLowerCase();
+                          if (k.startsWith('supabase') || k.startsWith('sb-') || k.startsWith('sb:') || (k.includes('gotrue') && k.includes('supabase')) || /^gotrue[:\.]/.test(k)) {
+                            try { sessionStorage.removeItem(key); } catch (e) {}
+                          }
+                        }
+                        // Force reload so app rehydrates as anonymous and avoids broken reads
+                        window.location.reload();
+                        return;
+                      }
+                    }
+                  } catch (e) {
+                    // ignore malformed token payload
+                  }
+                }
+              }
+            } catch (e) {
+              // ignore parse errors
+            }
+          }
+        }
+      } catch (e) {
+        // ignore any sanitiser errors
+      }
       let session;
       // Try to wire supabase-js session from localStorage token to reduce race on refresh
       try {

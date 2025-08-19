@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabasePublic } from "@/lib/supabasePublic";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { LostPet } from "../types";
@@ -24,46 +24,16 @@ export const useFetchLostPets = (): UseFetchLostPetsReturn => {
     try {
       setLoading(true);
       setError(null);
-
-      // Fetch lost pets data
-      const { data: pets, error: petsError } = await supabase
+      // Fetch lost pets and their images in one relational select using the public client
+      const { data: petsWithImages, error: petsError } = await supabasePublic
         .from("lost_pets")
-        .select("*")
+        .select("*, lost_pet_images(*)")
         .eq("status", "active")
         .order("created_at", { ascending: false });
 
-      if (petsError) {
-        throw petsError;
-      }
+      if (petsError) throw petsError;
 
-      // Fetch images for each pet
-      const petsWithImages = await Promise.all(
-        pets.map(async (pet) => {
-          const { data: images, error: imagesError } = await supabase
-            .from("lost_pet_images")
-            .select("*")
-            .eq("lost_pet_id", pet.id);
-
-          if (imagesError) {
-            console.warn(
-              `Error fetching images for pet ${pet.id}:`,
-              imagesError
-            );
-            // Don't throw error for images, just continue without them
-            return {
-              ...pet,
-              images: [],
-            };
-          }
-
-          return {
-            ...pet,
-            images: images || [],
-          };
-        })
-      );
-
-      setLostPets(petsWithImages);
+      setLostPets((petsWithImages || []) as any);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการโหลดข้อมูล";
