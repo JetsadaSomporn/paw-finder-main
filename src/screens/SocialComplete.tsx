@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 import { Loader2, FileText, X } from 'lucide-react';
 import { loadTermsOfService, loadPrivacyPolicy } from '../shared/utils/documentLoader.util';
 
@@ -11,6 +12,7 @@ const SocialComplete: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { refreshProfile } = useAuth();
 
   useEffect(() => {
     const init = async () => {
@@ -118,6 +120,13 @@ const SocialComplete: React.FC = () => {
         .upsert(updates, { onConflict: 'id' });
 
       if (error) throw error;
+
+      // refresh auth profile in context so header displays the new username immediately
+      try {
+        await refreshProfile();
+      } catch (err) {
+        // ignore -- best effort refresh
+      }
 
       navigate('/');
     } catch (err: any) {

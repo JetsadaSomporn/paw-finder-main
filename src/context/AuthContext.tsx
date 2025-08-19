@@ -9,6 +9,7 @@ interface AuthContextType {
   fullName: string | null;
   displayName: string | null;
   signOut: () => Promise<void>;
+  refreshProfile: (userId?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextType>({
   fullName: null,
   displayName: null,
   signOut: async () => {},
+  refreshProfile: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -27,6 +29,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string | null>(null);
+
+  // Fetch profile fields (username, full_name) for a given user id (or current user)
+  const refreshProfile = async (userId?: string) => {
+    try {
+      const id = userId ?? user?.id;
+      if (!id) return;
+      const { data } = await supabase.from('profiles').select('username, full_name').eq('id', id).single();
+      setUsername(data?.username ?? null);
+      setFullName(data?.full_name ?? null);
+    } catch (e) {
+      setUsername(null);
+      setFullName(null);
+    }
+  };
 
   const signOut = async () => {
     try {
@@ -44,16 +60,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { session } } = await supabase.auth.getSession();
         setUser(session?.user ?? null);
         if (session?.user) {
-          try {
-            const { data } = await supabase.from('profiles').select('username, full_name').eq('id', session.user.id).single();
-            setUsername(data?.username ?? null);
-            setFullName(data?.full_name ?? null);
-          } catch (e) {
-            setUsername(null);
-            setFullName(null);
-          }
+          await refreshProfile(session.user.id);
         } else {
           setUsername(null);
+          setFullName(null);
         }
       } catch (e) {
         setUser(null);
@@ -70,15 +80,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (async () => {
         setUser(session?.user ?? null);
         if (session?.user) {
-          try {
-            const { data } = await supabase.from('profiles').select('username, full_name').eq('id', session.user.id).single();
-            setUsername(data?.username ?? null);
-            setFullName(data?.full_name ?? null);
-          } catch (e) {
-            setUsername(null);
-          }
+          await refreshProfile(session.user.id);
         } else {
           setUsername(null);
+          setFullName(null);
         }
         setLoading(false);
       })();
@@ -90,7 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const displayName = username ?? fullName ?? null;
 
   return (
-    <AuthContext.Provider value={{ user, loading, username, fullName, displayName, signOut }}>
+    <AuthContext.Provider value={{ user, loading, username, fullName, displayName, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
