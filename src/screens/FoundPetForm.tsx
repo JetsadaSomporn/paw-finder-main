@@ -72,7 +72,7 @@ const FoundPetForm: React.FC = () => {
     hasCollar,
   } = watch();
 
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   // Marker & inline auth panel state
   const [markerPlaced, setMarkerPlaced] = React.useState<boolean>(false);
   const [mapError, setMapError] = React.useState<string | null>(null);
@@ -125,13 +125,19 @@ const FoundPetForm: React.FC = () => {
     if (!authEmail) return toast.error('กรุณากรอกอีเมล');
     setAuthLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const result = await supabase.auth.signInWithPassword({
         email: authEmail,
         password: authPassword,
       } as any);
-      if (error) throw error;
+      if (result.error) throw result.error;
       toast.success('เข้าสู่ระบบเรียบร้อย');
-      window.location.reload();
+      // Refresh profile in AuthContext so header and other UI update without a full page reload
+      try {
+        await refreshProfile();
+      } catch (err) {
+        // ignore refresh errors
+      }
+      handleCloseAuthPanel();
     } catch (err: any) {
       toast.error(err?.message || 'เข้าสู่ระบบไม่สำเร็จ');
       setAuthLoading(false);
@@ -139,13 +145,71 @@ const FoundPetForm: React.FC = () => {
   };
 
   const handleOAuth = async (provider: 'google' | 'facebook') => {
+    // Save a lightweight draft to sessionStorage before redirecting to OAuth
     try {
+      const draft = {
+        sex: watch('sex'),
+        petType: watch('petType'),
+        breed: watch('breed'),
+        pattern: watch('pattern'),
+        colors: watch('colors'),
+        latitude: watch('latitude'),
+        longitude: watch('longitude'),
+        foundDate: watch('foundDate'),
+        location: watch('location'),
+        province: watch('province'),
+        details: watch('details'),
+        contactName: watch('contactName'),
+        contactPhone: watch('contactPhone'),
+        contactEmail: watch('contactEmail'),
+        hasCollar: watch('hasCollar'),
+        markerPlaced,
+      };
+      try {
+        sessionStorage.setItem('foundPetDraft', JSON.stringify(draft));
+      } catch (err) {
+        /* ignore sessionStorage errors */
+      }
+
       await supabase.auth.signInWithOAuth({ provider });
     } catch (e) {
       if (process.env.NODE_ENV === 'development') console.error(e);
       toast.error('ไม่สามารถเริ่มการเข้าสู่ระบบแบบ OAuth ได้');
     }
   };
+
+  // Restore draft if present (useful after OAuth redirect)
+  React.useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('foundPetDraft');
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      // Reset form fields (omit images)
+      reset({
+        sex: draft.sex ?? FORM_DEFAULT_VALUES.sex,
+        petType: draft.petType ?? FORM_DEFAULT_VALUES.petType,
+        breed: draft.breed ?? FORM_DEFAULT_VALUES.breed,
+        pattern: draft.pattern ?? FORM_DEFAULT_VALUES.pattern,
+        colors: draft.colors ?? FORM_DEFAULT_VALUES.colors,
+        latitude: draft.latitude ?? FORM_DEFAULT_VALUES.latitude,
+        longitude: draft.longitude ?? FORM_DEFAULT_VALUES.longitude,
+        foundDate: draft.foundDate ?? FORM_DEFAULT_VALUES.foundDate,
+        location: draft.location ?? FORM_DEFAULT_VALUES.location,
+        province: draft.province ?? FORM_DEFAULT_VALUES.province,
+        details: draft.details ?? FORM_DEFAULT_VALUES.details,
+        contactName: draft.contactName ?? FORM_DEFAULT_VALUES.contactName,
+        contactPhone: draft.contactPhone ?? FORM_DEFAULT_VALUES.contactPhone,
+        contactEmail: draft.contactEmail ?? FORM_DEFAULT_VALUES.contactEmail,
+        hasCollar: draft.hasCollar ?? FORM_DEFAULT_VALUES.hasCollar,
+        images: FORM_DEFAULT_VALUES.images,
+      });
+      if (draft.markerPlaced) setMarkerPlaced(true);
+      // remove draft once restored
+      sessionStorage.removeItem('foundPetDraft');
+    } catch (err) {
+      /* ignore parsing errors */
+    }
+  }, [reset]);
 
   const onSubmit: SubmitHandler<FoundPetFormInputs> = async (data) => {
     if (!user) {
@@ -451,8 +515,11 @@ const FoundPetForm: React.FC = () => {
               <h2 className="text-xl font-bold text-[#6C4F3D] mb-4 flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-[#F4A261]" /> ตำแหน่งที่พบ
               </h2>
-              <div className="rounded-xl border border-[#F4A261]/30 overflow-hidden">
-                  <MapSelector onLocationSelect={handleLocationSelect} onUserLocationSelect={(_lat,_lng)=>{ setMarkerPlaced(true); setMapError(null); }} />
+              <div className={`rounded-xl mt-2 overflow-hidden ${mapError ? 'border-2 border-red-500' : 'border border-[#F4A261]/30'}`}>
+                {mapError && (
+                  <div className="text-sm text-red-600 p-2">{mapError}</div>
+                )}
+                <MapSelector onLocationSelect={handleLocationSelect} onUserLocationSelect={(_lat,_lng)=>{ setMarkerPlaced(true); setMapError(null); }} />
               </div>
             </div>
 

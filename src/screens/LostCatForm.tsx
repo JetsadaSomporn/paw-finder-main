@@ -91,7 +91,7 @@ const LostCatForm: React.FC = () => {
     hasCollar,
   } = watch();
 
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const [markerPlaced, setMarkerPlaced] = React.useState<boolean>(false);
   const [mapError, setMapError] = React.useState<string | null>(null);
   
@@ -147,14 +147,18 @@ const LostCatForm: React.FC = () => {
     if (!authEmail) return toast.error('กรุณากรอกอีเมล');
     setAuthLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const result = await supabase.auth.signInWithPassword({
         email: authEmail,
         password: authPassword,
       } as any);
-      if (error) throw error;
+      if (result.error) throw result.error;
       toast.success('เข้าสู่ระบบเรียบร้อย');
-      // reload so AuthContext rehydrates
-      window.location.reload();
+      try {
+        await refreshProfile();
+      } catch (err) {
+        // ignore
+      }
+      handleCloseAuthPanel();
     } catch (err: any) {
       toast.error(err?.message || 'เข้าสู่ระบบไม่สำเร็จ');
       setAuthLoading(false);
@@ -162,13 +166,72 @@ const LostCatForm: React.FC = () => {
   };
 
   const handleOAuth = async (provider: 'google' | 'facebook') => {
+    // Save lightweight draft to sessionStorage before redirecting
     try {
+      const draft = {
+        petType: watch('petType'),
+        petName: watch('petName'),
+        breed: watch('breed'),
+        pattern: watch('pattern'),
+        colors: watch('colors'),
+        ageYears: watch('ageYears'),
+        ageMonths: watch('ageMonths'),
+        lostDate: watch('lostDate'),
+        location: watch('location'),
+        province: watch('province'),
+        reward: watch('reward'),
+        details: watch('details'),
+        contactName: watch('contactName'),
+        contactPhone: watch('contactPhone'),
+        contactEmail: watch('contactEmail'),
+        sex: watch('sex'),
+        hasCollar: watch('hasCollar'),
+        latitude: watch('latitude'),
+        longitude: watch('longitude'),
+        markerPlaced,
+      };
+      try { sessionStorage.setItem('lostPetDraft', JSON.stringify(draft)); } catch (err) { /* ignore */ }
       await supabase.auth.signInWithOAuth({ provider });
     } catch (e) {
       if (process.env.NODE_ENV === 'development') console.error(e);
       toast.error('ไม่สามารถเริ่มการเข้าสู่ระบบแบบ OAuth ได้');
     }
   };
+
+  // Restore draft if present (useful after OAuth redirect)
+  React.useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('lostPetDraft');
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      reset({
+        petType: draft.petType ?? 'cat',
+        petName: draft.petName ?? '',
+        breed: draft.breed ?? '',
+        pattern: draft.pattern ?? '',
+        colors: draft.colors ?? [],
+        ageYears: draft.ageYears ?? '0',
+        ageMonths: draft.ageMonths ?? '0',
+        lostDate: draft.lostDate ?? '',
+        location: draft.location ?? '',
+        province: draft.province ?? '',
+        reward: draft.reward ?? '',
+        details: draft.details ?? '',
+        contactName: draft.contactName ?? '',
+        contactPhone: draft.contactPhone ?? '',
+        contactEmail: draft.contactEmail ?? '',
+        sex: draft.sex ?? 'unknown',
+        hasCollar: draft.hasCollar ?? false,
+        latitude: draft.latitude ?? 13.7563,
+        longitude: draft.longitude ?? 100.5018,
+        images: [],
+      });
+      if (draft.markerPlaced) setMarkerPlaced(true);
+      sessionStorage.removeItem('lostPetDraft');
+    } catch (err) {
+      /* ignore */
+    }
+  }, [reset]);
 
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
     if (!user) {
