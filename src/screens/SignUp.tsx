@@ -156,12 +156,12 @@ const SignUp: React.FC = () => {
       if (data.user) {
         const { error: insertError } = await supabase
           .from('profiles')
-          .insert([
+          .upsert([
             {
               id: data.user.id,
               username: username,
             }
-          ]);
+          ], { onConflict: 'id' });
 
         if (insertError) {
           // Surface the DB error so the user knows signup didn't persist fully
