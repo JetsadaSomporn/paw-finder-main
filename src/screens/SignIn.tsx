@@ -48,15 +48,15 @@ const SignIn = () => {
     setLoading(true);
     setError('');
     try {
-      // Facebook OAuth temporarily disabled — original call preserved below (commented)
-      /*
+      // Facebook OAuth re-enabled (previous maintenance toast preserved as comment)
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
         options: { redirectTo: `${window.location.origin}/auth/callback` }
       });
       if (error) throw error;
-      */
+      /*
       toast('กำลังปรับปรุงระบบ กรุณาใช้งานผ่าน Google หรือช่องทางอื่นชั่วคราว');
+      */
     } catch (err: any) {
       setError(err.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย Facebook');
     } finally {

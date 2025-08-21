@@ -194,10 +194,12 @@ const LostCatForm: React.FC = () => {
       };
       try { sessionStorage.setItem('lostPetDraft', JSON.stringify(draft)); } catch (err) { /* ignore */ }
       if (provider === 'facebook') {
-        // Facebook under maintenance — keep original call commented and show toast
+        // Facebook OAuth re-enabled (previous maintenance toast preserved as comment)
         try {
-          /* await supabase.auth.signInWithOAuth({ provider }); */
+          await supabase.auth.signInWithOAuth({ provider });
+          /*
           toast('กำลังปรับปรุงระบบ กรุณาใช้งานผ่าน Google หรือช่องทางอื่นชั่วคราว');
+          */
         } catch (err) {
           if (process.env.NODE_ENV === 'development') console.error(err);
           toast.error('ไม่สามารถเริ่มการเข้าสู่ระบบแบบ OAuth ได้');

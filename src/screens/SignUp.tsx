@@ -52,9 +52,8 @@ const SignUp: React.FC = () => {
   // Allow social signups even if terms not yet accepted; the user can accept later in the flow
   setLoading(true);
   setError('');
-    // Facebook currently under maintenance — show themed notice and keep original call commented
+    // Facebook OAuth re-enabled (previous maintenance toast preserved as comment)
     try {
-      /*
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
         options: {
@@ -62,8 +61,9 @@ const SignUp: React.FC = () => {
         }
       });
       if (error) throw error;
-      */
+      /*
       toast('กำลังปรับปรุงระบบ กรุณาใช้งานผ่าน Google หรือช่องทางอื่นชั่วคราว');
+      */
     } finally {
       setLoading(false);
     }

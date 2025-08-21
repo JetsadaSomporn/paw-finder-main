@@ -174,12 +174,12 @@ const FoundPetForm: React.FC = () => {
       }
 
       if (provider === 'facebook') {
-        // Facebook currently under maintenance — show themed notice and keep original call commented
+        // Facebook OAuth re-enabled (previous maintenance toast preserved as comment)
         try {
-          /*
           await supabase.auth.signInWithOAuth({ provider });
-          */
+          /*
           toast('กำลังปรับปรุงระบบ กรุณาใช้งานผ่าน Google หรือช่องทางอื่นชั่วคราว');
+          */
         } catch (e) {
           if (process.env.NODE_ENV === 'development') console.error(e);
           toast.error('ไม่สามารถเริ่มการเข้าสู่ระบบแบบ OAuth ได้');
