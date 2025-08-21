@@ -1,5 +1,6 @@
 import { Lock, LogIn, Mail } from "lucide-react";
-import { FaGoogle, FaFacebookF } from 'react-icons/fa';
+import { FaFacebookF } from 'react-icons/fa';
+import { FcGoogle } from 'react-icons/fc';
 import toast from 'react-hot-toast';
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -180,7 +181,7 @@ const SignIn = () => {
               disabled={loading}
               className={`w-full flex items-center justify-center px-4 py-3 border rounded-lg font-medium transition-colors duration-200 bg-white hover:bg-gray-50 text-gray-700 border-gray-300`}
             >
-              <FaGoogle className="h-5 w-5 mr-2" />
+              <FcGoogle className="h-5 w-5 mr-2" />
               เข้าสู่ระบบด้วย Google
             </button>
 
@@ -190,7 +191,7 @@ const SignIn = () => {
               disabled={loading}
               className={`w-full flex items-center justify-center px-4 py-3 border rounded-lg font-medium transition-colors duration-200 bg-white hover:bg-gray-50 text-black border-gray-300`}
             >
-              <FaFacebookF className="h-5 w-5 mr-2" />
+              <FaFacebookF className="h-5 w-5 mr-2 text-[#1877F2]" />
               เข้าสู่ระบบด้วย Facebook
             </button>
           </div>

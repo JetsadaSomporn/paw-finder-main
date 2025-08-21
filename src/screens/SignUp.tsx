@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, UserPlus, User, X, FileText } from 'lucide-react';
-import { FaGoogle, FaFacebookF } from 'react-icons/fa';
+import { FaFacebookF } from 'react-icons/fa';
+import { FcGoogle } from 'react-icons/fc';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -387,7 +388,7 @@ const SignUp: React.FC = () => {
               disabled={loading}
               className="w-full flex items-center justify-center px-4 py-3 border rounded-lg font-medium transition-colors duration-200 bg-white hover:bg-gray-50 border-gray-300 text-gray-700 cursor-pointer"
             >
-              <FaGoogle className="h-5 w-5 mr-2" />
+              <FcGoogle className="h-5 w-5 mr-2" />
               สมัครด้วย Google
             </button>
 
@@ -397,7 +398,7 @@ const SignUp: React.FC = () => {
               disabled={loading}
               className="w-full flex items-center justify-center px-4 py-3 border rounded-lg font-medium transition-colors duration-200 bg-white hover:bg-gray-50 text-black border-gray-300 cursor-pointer"
             >
-              <FaFacebookF className="h-5 w-5 mr-2" />
+              <FaFacebookF className="h-5 w-5 mr-2 text-[#1877F2]" />
               สมัครด้วย Facebook
             </button>
           </div>

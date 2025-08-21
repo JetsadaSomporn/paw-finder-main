@@ -21,7 +21,8 @@ import {
 import { Switch } from '../shared/components/ui/switch';
 import { Textarea } from '../shared/components/ui/textarea';
 import { petTypes } from '@/features/pets/constants/pet.constant';
-import { FaGoogle, FaFacebookF } from 'react-icons/fa';
+import { FaFacebookF } from 'react-icons/fa';
+import { FcGoogle } from 'react-icons/fc';
 
 type FormInputs = {
   petType: string;
@@ -417,8 +418,8 @@ const LostCatForm: React.FC = () => {
                 </div>
                 <div className="mt-2 text-center text-sm text-gray-500">หรือเข้าสู่ระบบด้วย</div>
                 <div className="flex gap-2 mt-2">
-                  <button type="button" onClick={() => handleOAuth('google')} className="flex-1 border rounded py-2 bg-white text-gray-700 border-gray-300">Google</button>
-                  <button type="button" onClick={() => handleOAuth('facebook')} className="flex-1 border rounded py-2 bg-white text-black border-gray-300"><FaFacebookF className="inline h-4 w-4 mr-2" />Facebook</button>
+                  <button type="button" onClick={() => handleOAuth('google')} className="flex-1 border rounded py-2 bg-white text-gray-700 border-gray-300"><FcGoogle className="inline h-4 w-4 mr-2" />Google</button>
+                  <button type="button" onClick={() => handleOAuth('facebook')} className="flex-1 border rounded py-2 bg-white text-black border-gray-300"><FaFacebookF className="inline h-4 w-4 mr-2 text-[#1877F2]" />Facebook</button>
                 </div>
               </form>
             </div>
