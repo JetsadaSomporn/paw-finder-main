@@ -21,6 +21,7 @@ import {
 import { Switch } from '../shared/components/ui/switch';
 import { Textarea } from '../shared/components/ui/textarea';
 import { petTypes } from '@/features/pets/constants/pet.constant';
+import { FaGoogle, FaFacebookF } from 'react-icons/fa';
 
 type FormInputs = {
   petType: string;
@@ -166,7 +167,7 @@ const LostCatForm: React.FC = () => {
   };
 
   const handleOAuth = async (provider: 'google' | 'facebook') => {
-    // Save lightweight draft to sessionStorage before redirecting
+  // Save lightweight draft to sessionStorage before redirecting
     try {
       const draft = {
         petType: watch('petType'),
@@ -191,7 +192,18 @@ const LostCatForm: React.FC = () => {
         markerPlaced,
       };
       try { sessionStorage.setItem('lostPetDraft', JSON.stringify(draft)); } catch (err) { /* ignore */ }
-      await supabase.auth.signInWithOAuth({ provider });
+      if (provider === 'facebook') {
+        // Facebook under maintenance — keep original call commented and show toast
+        try {
+          /* await supabase.auth.signInWithOAuth({ provider }); */
+          toast('กำลังปรับปรุงระบบ กรุณาใช้งานผ่าน Google หรือช่องทางอื่นชั่วคราว');
+        } catch (err) {
+          if (process.env.NODE_ENV === 'development') console.error(err);
+          toast.error('ไม่สามารถเริ่มการเข้าสู่ระบบแบบ OAuth ได้');
+        }
+      } else {
+        await supabase.auth.signInWithOAuth({ provider });
+      }
     } catch (e) {
       if (process.env.NODE_ENV === 'development') console.error(e);
       toast.error('ไม่สามารถเริ่มการเข้าสู่ระบบแบบ OAuth ได้');
@@ -405,8 +417,8 @@ const LostCatForm: React.FC = () => {
                 </div>
                 <div className="mt-2 text-center text-sm text-gray-500">หรือเข้าสู่ระบบด้วย</div>
                 <div className="flex gap-2 mt-2">
-                  <button type="button" onClick={() => handleOAuth('google')} className="flex-1 border rounded py-2">Google</button>
-                  <button type="button" onClick={() => handleOAuth('facebook')} className="flex-1 border rounded py-2">Facebook</button>
+                  <button type="button" onClick={() => handleOAuth('google')} className="flex-1 border rounded py-2 bg-white text-gray-700 border-gray-300">Google</button>
+                  <button type="button" onClick={() => handleOAuth('facebook')} className="flex-1 border rounded py-2 bg-white text-black border-gray-300"><FaFacebookF className="inline h-4 w-4 mr-2" />Facebook</button>
                 </div>
               </form>
             </div>

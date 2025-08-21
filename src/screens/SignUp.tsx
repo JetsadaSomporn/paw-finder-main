@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, UserPlus, User, X, FileText, Facebook } from 'lucide-react';
-import { FaGoogle } from 'react-icons/fa';
+import { Mail, Lock, UserPlus, User, X, FileText } from 'lucide-react';
+import { FaGoogle, FaFacebookF } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { loadTermsOfService, loadPrivacyPolicy } from '../shared/utils/documentLoader.util';
@@ -50,18 +51,18 @@ const SignUp: React.FC = () => {
   // Allow social signups even if terms not yet accepted; the user can accept later in the flow
   setLoading(true);
   setError('');
-    
+    // Facebook currently under maintenance — show themed notice and keep original call commented
     try {
+      /*
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`
         }
       });
-      
       if (error) throw error;
-    } catch (error: any) {
-      setError(error.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย Facebook');
+      */
+      toast('กำลังปรับปรุงระบบ กรุณาใช้งานผ่าน Google หรือช่องทางอื่นชั่วคราว');
     } finally {
       setLoading(false);
     }
@@ -378,18 +379,8 @@ const SignUp: React.FC = () => {
             </div>
           </div>
 
-          {/* Social Login Buttons */}
+          {/* Social Login Buttons (Google first, Facebook below) */}
           <div className="space-y-3">
-            <button
-              type="button"
-              onClick={handleFacebookSignUp}
-              disabled={loading}
-              className="w-full flex items-center justify-center px-4 py-3 border rounded-lg text-white font-medium transition-colors duration-200 bg-[#1877F2] hover:bg-[#166FE5] border-[#1877F2] cursor-pointer"
-            >
-              <Facebook className="h-5 w-5 mr-2" />
-              สมัครด้วย Facebook
-            </button>
-            
             <button
               type="button"
               onClick={handleGoogleSignUp}
@@ -398,6 +389,16 @@ const SignUp: React.FC = () => {
             >
               <FaGoogle className="h-5 w-5 mr-2" />
               สมัครด้วย Google
+            </button>
+
+            <button
+              type="button"
+              onClick={handleFacebookSignUp}
+              disabled={loading}
+              className="w-full flex items-center justify-center px-4 py-3 border rounded-lg font-medium transition-colors duration-200 bg-white hover:bg-gray-50 text-black border-gray-300 cursor-pointer"
+            >
+              <FaFacebookF className="h-5 w-5 mr-2" />
+              สมัครด้วย Facebook
             </button>
           </div>
 

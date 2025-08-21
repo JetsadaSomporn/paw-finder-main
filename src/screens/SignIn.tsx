@@ -1,5 +1,6 @@
-import { Lock, LogIn, Mail, Facebook } from "lucide-react";
-import { FaGoogle } from 'react-icons/fa';
+import { Lock, LogIn, Mail } from "lucide-react";
+import { FaGoogle, FaFacebookF } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -46,11 +47,15 @@ const SignIn = () => {
     setLoading(true);
     setError('');
     try {
+      // Facebook OAuth temporarily disabled — original call preserved below (commented)
+      /*
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
         options: { redirectTo: `${window.location.origin}/auth/callback` }
       });
       if (error) throw error;
+      */
+      toast('กำลังปรับปรุงระบบ กรุณาใช้งานผ่าน Google หรือช่องทางอื่นชั่วคราว');
     } catch (err: any) {
       setError(err.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย Facebook');
     } finally {
@@ -171,22 +176,22 @@ const SignIn = () => {
           <div className="space-y-3">
             <button
               type="button"
-              onClick={handleFacebookSignIn}
-              disabled={loading}
-              className={`w-full flex items-center justify-center px-4 py-3 border rounded-lg text-white font-medium transition-colors duration-200 bg-[#1877F2] hover:bg-[#166FE5]`}
-            >
-              <Facebook className="h-5 w-5 mr-2" />
-              เข้าสู่ระบบด้วย Facebook
-            </button>
-
-            <button
-              type="button"
               onClick={handleGoogleSignIn}
               disabled={loading}
               className={`w-full flex items-center justify-center px-4 py-3 border rounded-lg font-medium transition-colors duration-200 bg-white hover:bg-gray-50 text-gray-700 border-gray-300`}
             >
               <FaGoogle className="h-5 w-5 mr-2" />
               เข้าสู่ระบบด้วย Google
+            </button>
+
+            <button
+              type="button"
+              onClick={handleFacebookSignIn}
+              disabled={loading}
+              className={`w-full flex items-center justify-center px-4 py-3 border rounded-lg font-medium transition-colors duration-200 bg-white hover:bg-gray-50 text-black border-gray-300`}
+            >
+              <FaFacebookF className="h-5 w-5 mr-2" />
+              เข้าสู่ระบบด้วย Facebook
             </button>
           </div>
 
