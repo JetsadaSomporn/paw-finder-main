@@ -1,6 +1,5 @@
 import React from "react";
 import clsx from "clsx";
-import { motion } from 'framer-motion';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary";
@@ -14,24 +13,20 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const base =
-    "transition-all duration-200 ease-in-out font-medium focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 min-h-[44px] px-5 whitespace-nowrap flex items-center justify-center text-base";
-
+    "transition-colors duration-200 font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 min-h-[44px] px-6 whitespace-nowrap flex items-center justify-center text-base";
   const variants = {
     primary:
-      "bg-gradient-to-r from-amber-400 to-amber-500 text-white rounded-lg py-2 shadow-sm hover:shadow-md",
+      "bg-primary text-white rounded-[12px] py-2 hover:bg-[#e85c50]",
     secondary:
-      "bg-white text-stone-700 border border-stone-200 rounded-lg py-2 hover:bg-stone-100",
-  } as const;
-
+      "bg-white text-primary border border-primary rounded-[12px] py-2 hover:bg-secondary",
+  };
   return (
-    <motion.button
-      whileTap={{ scale: 0.98 }}
-      whileHover={{ translateY: -2 }}
+    <button
       className={clsx(base, variants[variant], className)}
-      {...(props as any)}
+      {...props}
     >
       {children}
-    </motion.button>
+    </button>
   );
 };
 

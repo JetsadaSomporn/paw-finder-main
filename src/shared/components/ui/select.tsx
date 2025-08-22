@@ -35,7 +35,7 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={clsx(
-      "flex h-10 w-full items-center justify-between rounded-lg border border-stone-200 px-3 py-2 text-sm text-black placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 bg-white/80 backdrop-blur-sm",
+      "flex h-10 w-full items-center justify-between rounded-md border border-input px-3 py-2 text-sm text-black ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 bg-white",
       className
     )}
     {...props}

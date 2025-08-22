@@ -146,15 +146,8 @@ const FoundPetsList: React.FC = () => {
               <h3 className="text-lg font-semibold text-[#6C4F3D]">รายการสัตว์เลี้ยงที่พบ</h3>
               <div className="space-y-4 max-h-96 overflow-y-auto">
                 {foundPets.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="mx-auto w-28 h-28 rounded-full bg-amber-50 flex items-center justify-center mb-4">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5C4.5 8 7.5 6 12 6s7.5 2 7.5 5.5-3 6.5-7.5 9c-4.5-2.5-7.5-5.5-7.5-9z"/></svg>
-                    </div>
-                    <h3 className="text-lg font-semibold text-stone-700 mb-2">🐾 ยังไม่มีรายการสัตว์เลี้ยงที่พบ</h3>
-                    <p className="text-sm text-stone-500 mb-4">ลองปรับตัวกรอง หรือคุณสามารถสร้างประกาศใหม่เพื่อช่วยสัตว์เลี้ยงให้กลับบ้าน</p>
-                    <div className="flex justify-center">
-                      <a href="/found-pets" className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 text-white rounded-full shadow-sm hover:shadow-md transition">สร้างประกาศใหม่</a>
-                    </div>
+                  <div className="text-center py-8 text-[#3E3E3E]">
+                    ยังไม่มีรายการสัตว์เลี้ยงที่พบ
                   </div>
                 ) : (
                   foundPets.map((pet) => (

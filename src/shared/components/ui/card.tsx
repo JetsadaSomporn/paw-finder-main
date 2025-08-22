@@ -1,6 +1,5 @@
 import React from "react";
 import clsx from "clsx";
-import { motion } from 'framer-motion';
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string;
@@ -8,17 +7,16 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export const Card: React.FC<CardProps> = ({ className = "", children, ...props }) => {
   return (
-    <motion.div
-      whileHover={{ translateY: -4, boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}
+    <div
       className={clsx(
-        "bg-white/80 backdrop-blur-sm rounded-xl border border-stone-100 p-5 md:p-6 transition-transform duration-200",
+        "bg-card rounded-[20px] shadow-card p-4 md:p-6",
         className
       )}
       {...props}
     >
       {children}
-    </motion.div>
+    </div>
   );
 };
 
-export default Card;
+export default Card; 
