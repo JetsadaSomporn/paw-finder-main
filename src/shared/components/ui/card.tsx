@@ -9,7 +9,7 @@ export const Card: React.FC<CardProps> = ({ className = "", children, ...props }
   return (
     <div
       className={clsx(
-        "bg-white rounded-2xl shadow-sm border border-stone-200 p-5",
+        "bg-card rounded-[20px] shadow-card p-4 md:p-6",
         className
       )}
       {...props}

@@ -638,7 +638,7 @@ const LostCatForm: React.FC = () => {
                       <MapPin className="h-4 w-4 text-[#F4A261]" />
                       ตำแหน่งที่หาย (คลิกที่แผนที่)
                     </Label>
-                    <div className={`rounded-xl mt-2 overflow-hidden ${mapError ? 'border-2 border-red-500' : 'border border-stone-200'}`}>
+                    <div className={`rounded-xl mt-2 overflow-hidden ${mapError ? 'border-2 border-red-500' : 'border border-[#F4A261]/30'}`}>
                       {mapError && (
                         <div className="text-sm text-red-600 p-2">{mapError}</div>
                       )}
