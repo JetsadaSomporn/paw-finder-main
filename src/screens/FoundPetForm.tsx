@@ -530,7 +530,7 @@ const FoundPetForm: React.FC = () => {
               <h2 className="text-xl font-bold text-[#6C4F3D] mb-4 flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-[#F4A261]" /> ตำแหน่งที่พบ
               </h2>
-              <div className={`rounded-xl mt-2 overflow-hidden ${mapError ? 'border-2 border-red-500' : 'border border-stone-200'}`}>
+              <div className={`rounded-xl mt-2 overflow-hidden ${mapError ? 'border-2 border-red-500' : 'border border-[#F4A261]/30'}`}>
                 {mapError && (
                   <div className="text-sm text-red-600 p-2">{mapError}</div>
                 )}

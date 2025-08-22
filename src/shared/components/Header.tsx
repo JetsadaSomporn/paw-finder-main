@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Link, useLocation as useRouterLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 const Header: React.FC = () => {
   const { user, displayName, loading: profileLoading, signOut } = useAuth();
@@ -32,22 +33,28 @@ const Header: React.FC = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled((window.scrollY || 0) > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <motion.header
+      initial={false}
+      animate={{ background: scrolled ? 'rgba(255,255,255,0.7)' : 'transparent' }}
+      className="sticky top-0 z-50 border-b border-stone-100"
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <Link to="/" state={currentState} className="flex items-center space-x-2">
-                <img
-                  src="/logo.png"
-                  alt="Paw Finder Logo"
-                  className="h-16 w-auto object-contain"
-                />
-                <span className="text-xl font-bold text-[#F4A261]">
-                  PawFinder
-                </span>
+                <img src="/logo.png" alt="Paw Finder Logo" className="h-10 w-auto object-contain" />
+                <span className="text-lg font-bold text-amber-500">PawFinder</span>
               </Link>
             </div>
           </div>
@@ -218,7 +225,7 @@ const Header: React.FC = () => {
           </div>
         </div>
       )}
-    </header>
+    </motion.header>
   );
 };
 
