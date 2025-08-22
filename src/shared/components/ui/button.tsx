@@ -13,12 +13,12 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const base =
-    "transition-colors duration-200 font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 min-h-[44px] px-6 whitespace-nowrap flex items-center justify-center text-base";
+    "transition-colors duration-200 font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px] px-5 whitespace-nowrap flex items-center justify-center text-base";
   const variants = {
     primary:
-      "bg-primary text-white rounded-[12px] py-2 hover:bg-[#e85c50]",
+      "bg-amber-400 text-white rounded-xl py-2 hover:bg-amber-500 focus:ring-amber-300",
     secondary:
-      "bg-white text-primary border border-primary rounded-[12px] py-2 hover:bg-secondary",
+      "bg-white text-amber-600 border border-stone-200 rounded-xl py-2 hover:bg-stone-50 focus:ring-amber-300",
   };
   return (
     <button

@@ -4,14 +4,14 @@ import { Heart, MapPin, Mail, Phone } from 'lucide-react';
 const Footer: React.FC = () => {
   return (
     <footer className="bg-[#F7FFE0] border-t border-[#F4A261] mt-12">
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center space-x-2 mb-4">
               <img 
                 src="/logo.png" 
                 alt="Paw Finder Logo" 
-                className="h-24 w-24 object-contain"
+                className="h-16 w-auto object-contain"
               />
               <h2 className="text-xl font-semibold text-[#6C4F3D]">
                 Paw Finder
