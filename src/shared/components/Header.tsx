@@ -33,31 +33,28 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header className="bg-white border-b" style={{ borderColor: '#EEEEEE' }}>
+      <div className="max-w-5xl mx-auto px-4 md:px-6">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <Link to="/" state={currentState} className="flex items-center space-x-2">
-                <img
-                  src="/logo.png"
-                  alt="Paw Finder Logo"
-                  className="h-24 w-24 object-contain"
-                />
-                <span className="text-xl font-bold text-[#F4A261]">
-                  PawFinder
-                </span>
+              <Link to="/" state={currentState} className="flex items-center space-x-3">
+                {/* inline paw svg */}
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                  <path d="M12 21s-6-4.5-9-9c-1.5-2.25.5-6 3-6 1.5 0 2 1 3 2s2-1 3-1 2 1 3 1 1.5-2 3-2 4.5 3.75 3 6c-3 4.5-9 9-9 9z" fill="#F59E0B" />
+                </svg>
+                <span className="text-lg font-semibold text-stone-600">PawFinder</span>
               </Link>
             </div>
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-8">
+      <nav className="hidden md:flex space-x-6">
             <Link
               to="/lost-pets"
               state={currentState}
-              className="text-gray-700 hover:text-[#F4A261] px-3 py-2 text-md font-medium"
+        className="text-stone-600 hover:text-amber-500 px-3 py-2 text-md font-medium"
             >
               แจ้งสัตว์เลี้ยงหาย
             </Link>
@@ -98,7 +95,7 @@ const Header: React.FC = () => {
                 </span>
                 <button
                   onClick={handleSignOut}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#F4A261] hover:bg-[#FF5A4A] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F4A261]"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-amber-500 hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-300"
                 >
                   <LogOut className="h-5 w-5" />
                   <span className="ml-2">ออกจากระบบ</span>
@@ -109,14 +106,14 @@ const Header: React.FC = () => {
                 <Link
                   to="/signin"
                   state={currentState}
-                  className="text-gray-700 hover:text-[#F4A261] px-3 py-2 text-sm font-medium"
+                  className="text-stone-600 hover:text-amber-500 px-3 py-2 text-sm font-medium"
                 >
                   เข้าสู่ระบบ
                 </Link>
                 <Link
                   to="/signup"
                   state={currentState}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#F4A261] hover:bg-[#FF5A4A] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F4A261]"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-amber-500 hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-300"
                 >
                   สมัครสมาชิก
                 </Link>

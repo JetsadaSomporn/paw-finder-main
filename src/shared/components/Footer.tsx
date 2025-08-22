@@ -3,21 +3,17 @@ import { Heart, MapPin, Mail, Phone } from 'lucide-react';
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-[#F7FFE0] border-t border-[#F4A261] mt-12">
-      <div className="container mx-auto px-4 py-8">
+    <footer className="border-t mt-12" style={{ borderColor: '#EEEEEE' }}>
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <div className="flex items-center space-x-2 mb-4">
-              <img 
-                src="/logo.png" 
-                alt="Paw Finder Logo" 
-                className="h-24 w-24 object-contain"
-              />
-              <h2 className="text-xl font-semibold text-[#6C4F3D]">
-                Paw Finder
-              </h2>
+            <div className="flex items-center space-x-3 mb-3">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                <path d="M12 21s-6-4.5-9-9c-1.5-2.25.5-6 3-6 1.5 0 2 1 3 2s2-1 3-1 2 1 3 1 1.5-2 3-2 4.5 3.75 3 6c-3 4.5-9 9-9 9z" fill="#F59E0B" />
+              </svg>
+              <h2 className="text-lg font-semibold text-stone-600">Paw Finder</h2>
             </div>
-            <p className="text-[#3E3E3E] mb-4">
+            <p className="text-stone-600 mb-4">
               ช่วยเหลือเจ้าของและสัตว์เลี้ยงที่หายไปให้ได้พบกันอีกครั้ง
             </p>
             <div className="flex space-x-4">
@@ -109,13 +105,13 @@ const Footer: React.FC = () => {
           </div>
         </div>
         
-        <div className="border-t border-[#F4A261] mt-8 pt-6 text-center">
-          <p className="text-[#2B2B2B] text-sm">
+        <div className="border-t mt-8 pt-6 text-center" style={{ borderColor: '#EEEEEE' }}>
+          <p className="text-stone-600 text-sm">
             © {new Date().getFullYear()} สัตว์เลี้ยงหาย. สงวนลิขสิทธิ์ทั้งหมด.
           </p>
-          <div className="flex justify-center items-center mt-2 text-sm text-[#3E3E3E]">
+          <div className="flex justify-center items-center mt-2 text-sm text-stone-600">
             <span>Made with</span>
-            <Heart className="w-4 h-4 text-[#F4A261] mx-1" />
+            <Heart className="w-4 h-4 text-amber-500 mx-1" />
             <span>เพื่อสัตว์เลี้ยงทุกตัว</span>
           </div>
         </div>
