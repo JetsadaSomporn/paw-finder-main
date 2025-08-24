@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { motion } from 'framer-motion';
 
 const SignIn = () => {
   const [email, setEmail] = useState("");
@@ -84,32 +85,28 @@ const SignIn = () => {
 
   return (
     <div className="min-h-screen bg-[#F7FFE0] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <div className="flex justify-center">
-            <div className="flex items-center space-x-3">
-              <img 
-                src="/logo.png" 
-                alt="Paw Finder Logo" 
-                className="h-24 w-24 object-contain"
-              />
-              <h2 className="text-3xl font-bold text-[#6C4F3D]">
-                สัตว์เลี้ยงหาย
-              </h2>
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.36, ease: 'easeOut' }}
+        className="w-full max-w-md"
+      >
+        <div className="bg-white/70 backdrop-blur-sm border border-amber-100/40 rounded-2xl shadow-lg p-8">
+          <div className="flex items-center gap-4 mb-4">
+            <img src="/logo.png" alt="Paw Finder Logo" className="h-16 w-16 object-contain" />
+            <div>
+              <h2 className="text-2xl font-semibold text-[#6C4F3D]">สัตว์เลี้ยงหาย</h2>
+              <p className="text-sm text-[#4B4B4B]">เข้าสู่ระบบเพื่อช่วยเหลือสัตว์เลี้ยงที่หายไป</p>
             </div>
           </div>
-          <p className="mt-2 text-center text-sm text-[#3E3E3E]">
-            เข้าสู่ระบบเพื่อช่วยเหลือสัตว์เลี้ยงที่หายไป
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
+
+          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-[#6C4F3D]">
+              <label htmlFor="email" className="block text-xs font-medium text-[#6C4F3D] mb-2 uppercase tracking-wider">
                 อีเมล
               </label>
-              <div className="mt-1 relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#F4A261] h-5 w-5" />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-[#F4A261] h-5 w-5" />
                 <input
                   id="email"
                   name="email"
@@ -118,17 +115,18 @@ const SignIn = () => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none relative block w-full px-10 py-3 border border-[#F4A261] placeholder-[#3E3E3E] text-[#2B2B2B] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F4A261] focus:border-[#F4A261] focus:z-10 sm:text-sm bg-white"
+                  className="w-full pl-12 pr-3 py-3 rounded-xl border border-stone-200 bg-white text-[#2B2B2B] placeholder-[#8B8B8B] focus:outline-none focus:ring-2 focus:ring-[#F4A261] focus:border-[#F4A261] transition-shadow"
                   placeholder="กรอกอีเมลของคุณ"
                 />
               </div>
             </div>
+
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-[#6C4F3D]">
+              <label htmlFor="password" className="block text-xs font-medium text-[#6C4F3D] mb-2 uppercase tracking-wider">
                 รหัสผ่าน
               </label>
-              <div className="mt-1 relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#F4A261] h-5 w-5" />
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-[#F4A261] h-5 w-5" />
                 <input
                   id="password"
                   name="password"
@@ -137,78 +135,65 @@ const SignIn = () => {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none relative block w-full px-10 py-3 border border-[#F4A261] placeholder-[#3E3E3E] text-[#2B2B2B] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F4A261] focus:border-[#F4A261] focus:z-10 sm:text-sm bg-white"
+                  className="w-full pl-12 pr-3 py-3 rounded-xl border border-stone-200 bg-white text-[#2B2B2B] placeholder-[#8B8B8B] focus:outline-none focus:ring-2 focus:ring-[#F4A261] focus:border-[#F4A261] transition-shadow"
                   placeholder="กรอกรหัสผ่านของคุณ"
                 />
               </div>
             </div>
-          </div>
 
-          {error && (
-            <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg">
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg">
+                {error}
+              </div>
+            )}
 
-          <div>
-            <button
+            <motion.button
+              whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-[#F4A261] hover:bg-[#6C4F3D] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F4A261] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              className="w-full inline-flex items-center justify-center gap-3 rounded-full py-3 px-4 bg-gradient-to-r from-[#F4A261] to-[#F4A261] text-white font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span className="absolute left-0 inset-y-0 flex items-center pl-3">
-                <LogIn className="h-5 w-5 text-white group-hover:text-white" />
-              </span>
-              {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
-            </button>
-          </div>
+              <LogIn className="h-5 w-5 text-white" />
+              {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+            </motion.button>
 
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
+            <div className="flex items-center my-2">
+              <div className="flex-1 h-px bg-stone-200" />
+              <span className="px-3 text-sm text-stone-500">หรือ</span>
+              <div className="flex-1 h-px bg-stone-200" />
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-[#F7FFE0] text-gray-500">หรือ</span>
-            </div>
-          </div>
 
-          {/* Social Sign In Buttons */}
-          <div className="space-y-3">
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={loading}
-              className={`w-full flex items-center justify-center px-4 py-3 border rounded-lg font-medium transition-colors duration-200 bg-white hover:bg-gray-50 text-gray-700 border-gray-300`}
-            >
-              <FcGoogle className="h-5 w-5 mr-2" />
-              เข้าสู่ระบบด้วย Google
-            </button>
-
-            <button
-              type="button"
-              onClick={handleFacebookSignIn}
-              disabled={loading}
-              className={`w-full flex items-center justify-center px-4 py-3 border rounded-lg font-medium transition-colors duration-200 bg-white hover:bg-gray-50 text-black border-gray-300`}
-            >
-              <FaFacebookF className="h-5 w-5 mr-2 text-[#1877F2]" />
-              เข้าสู่ระบบด้วย Facebook
-            </button>
-          </div>
-
-          <div className="text-center">
-            <p className="text-sm text-[#3E3E3E]">
-              ยังไม่มีบัญชี?{" "}
-              <Link
-                to="/signup"
-                className="font-medium text-[#F4A261] hover:text-[#6C4F3D] transition-colors duration-200"
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 rounded-xl py-3 px-4 border border-stone-200 bg-white text-stone-700 hover:shadow-sm transition-shadow"
               >
+                <FcGoogle className="h-5 w-5" />
+                เข้าสู่ระบบด้วย Google
+              </button>
+
+              <button
+                type="button"
+                onClick={handleFacebookSignIn}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 rounded-xl py-3 px-4 border border-stone-200 bg-white text-black hover:shadow-sm transition-shadow"
+              >
+                <FaFacebookF className="h-5 w-5 text-[#1877F2]" />
+                เข้าสู่ระบบด้วย Facebook
+              </button>
+            </div>
+
+            <p className="text-center text-sm text-stone-600 mt-3">
+              ยังไม่มีบัญชี?{' '}
+              <Link to="/signup" className="font-medium text-[#F4A261] hover:text-[#6C4F3D]">
                 สมัครสมาชิก
               </Link>
             </p>
-          </div>
-        </form>
-      </div>
+          </form>
+        </div>
+      </motion.div>
     </div>
   );
 };
