@@ -1,5 +1,6 @@
 import { Info, MapPin, Upload } from 'lucide-react';
 import React from 'react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { Controller, SubmitHandler, useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -376,9 +377,9 @@ const LostCatForm: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7FFE0] py-8 px-4">
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.36 }} className="min-h-screen bg-[#F7FFE0] py-8 px-4">
       <div className="max-w-3xl mx-auto">
-        <div className="bg-white rounded-[20px] shadow-lg p-0 md:p-0 overflow-hidden">
+        <div className="bg-white rounded-[20px] shadow-lg overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-[#F4A261] to-[#E8956A] p-8 flex items-center gap-4">
             <div className="bg-white rounded-full p-3 shadow flex items-center justify-center">
@@ -786,7 +787,7 @@ const LostCatForm: React.FC = () => {
           </form>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
